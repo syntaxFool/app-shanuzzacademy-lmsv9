@@ -620,17 +620,24 @@
             handleLogin(e) {
                 e.preventDefault();
                 const loginError = document.getElementById('loginError');
-                if (!this.store || !this.store.users) {
-                    loginError.textContent = 'App error: User store not loaded.';
+                // Fallback: use window.store if this.store is missing
+                let storeToUse = this.store;
+                if (!storeToUse && window.store) {
+                    storeToUse = window.store;
+                    loginError.textContent = 'Debug: this.store missing, using window.store.';
+                    loginError.classList.remove('hidden');
+                }
+                if (!storeToUse || !storeToUse.users) {
+                    loginError.textContent = 'App error: User store not loaded. this.store=' + JSON.stringify(this.store) + ', window.store=' + JSON.stringify(window.store);
                     loginError.classList.remove('hidden');
                     return;
                 }
                 // Debug output: show users array at login time
-                loginError.textContent = 'Debug: Users at login: ' + JSON.stringify(this.store.users);
+                loginError.textContent = 'Debug: Users at login: ' + JSON.stringify(storeToUse.users);
                 loginError.classList.remove('hidden');
                 const u = e.target.username.value;
                 const p = e.target.password.value;
-                const user = this.store.users.find(x => String(x.username) === String(u) && String(x.password) === String(p));
+                const user = storeToUse.users.find(x => String(x.username) === String(u) && String(x.password) === String(p));
                 if (user) {
                     this.currentUser = user;
                     document.getElementById('loginScreen').classList.add('hidden');
@@ -639,8 +646,8 @@
                     this.init();
                 } else {
                     // Try syncing with cloud again in case users were just added
-                    this.store.syncWithCloud().then(() => {
-                        const userRetry = this.store.users.find(x => String(x.username) === String(u) && String(x.password) === String(p));
+                    storeToUse.syncWithCloud().then(() => {
+                        const userRetry = storeToUse.users.find(x => String(x.username) === String(u) && String(x.password) === String(p));
                         if (userRetry) {
                             this.currentUser = userRetry;
                             document.getElementById('loginScreen').classList.add('hidden');
@@ -648,7 +655,7 @@
                             document.getElementById('appContent').classList.add('flex');
                             this.init();
                         } else {
-                            loginError.textContent = 'Debug: Users after sync: ' + JSON.stringify(this.store.users);
+                            loginError.textContent = 'Debug: Users after sync: ' + JSON.stringify(storeToUse.users);
                             loginError.classList.remove('hidden');
                         }
                     });
