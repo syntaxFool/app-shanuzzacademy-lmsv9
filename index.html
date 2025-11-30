@@ -1,3 +1,15 @@
+        <!-- Superuser Creation Modal -->
+        <div id="superuserModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 hidden">
+            <div class="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
+                <h2 class="text-xl font-bold mb-4">Create Superuser Account</h2>
+                <form id="superuserForm" class="space-y-4">
+                    <input type="text" id="suName" class="w-full border rounded p-2" placeholder="Full Name" required />
+                    <input type="text" id="suUsername" class="w-full border rounded p-2" placeholder="Username" required />
+                    <input type="password" id="suPassword" class="w-full border rounded p-2" placeholder="Password" required />
+                    <button type="submit" class="w-full bg-primary text-white font-bold py-2 rounded">Create Superuser</button>
+                </form>
+            </div>
+        </div>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -122,7 +134,10 @@
                 ui.showLoading(true);
                 try {
                     console.log('syncWithCloud: Fetching from', this.config.dbUrl);
-                    const response = await fetch(this.config.dbUrl, { method: 'GET', redirect: 'follow', credentials: 'omit' });
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+                    const response = await fetch(this.config.dbUrl, { method: 'GET', redirect: 'follow', credentials: 'omit', signal: controller.signal });
+                    clearTimeout(timeoutId);
                     if (!response.ok) throw new Error('Network response was not ok: ' + response.status);
                     const cloudData = await response.json();
                     console.log('syncWithCloud: Received data', cloudData);
@@ -149,7 +164,10 @@
                 ui.showLoading(true);
                 try {
                     const payload = { action: 'save_all', leads: this.state, users: this.users, logs: this.logs };
-                    await fetch(this.config.dbUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) });
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+                    await fetch(this.config.dbUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload), signal: controller.signal });
+                    clearTimeout(timeoutId);
                 } catch (e) { console.error("Sync Write Failed", e); } finally { ui.showLoading(false); }
             }
             save() { this.saveLocal(); this.pushToCloud(); }
@@ -161,11 +179,15 @@
                 this.saveLocal();
                 if ((this.config.dbUrl || this.config.appTitle) && window.app && window.app.currentUser && window.app.currentUser.role === 'superuser') {
                     try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
                         await fetch(this.config.dbUrl, {
                             method: 'POST',
                             headers: { 'Content-Type': 'text/plain' },
-                            body: JSON.stringify({ action: 'save_script_url', scriptUrl: this.config.dbUrl, appTitle: this.config.appTitle })
+                            body: JSON.stringify({ action: 'save_script_url', scriptUrl: this.config.dbUrl, appTitle: this.config.appTitle }),
+                            signal: controller.signal
                         });
+                        clearTimeout(timeoutId);
                     } catch (e) { /* ignore */ }
                 }
                 if (this.config.dbUrl) this.syncWithCloud();
@@ -219,13 +241,27 @@
                 this.interests = data.interests || []; 
                 this.settings = data.settings || { locations: [], sources: [] };
 
-                // Force fallback: always create default superuser if users is empty
+                // Force fallback: prompt for superuser creation if users is empty
                 if (!Array.isArray(this.users) || this.users.length === 0) {
-                    this.users = [{ id: 'super-01', username: 'nox1', password: '1233', role: 'superuser', name: 'Super User' }];
-                    this.saveLocal();
-                    if (typeof document !== 'undefined' && document.getElementById('loginError')) {
-                        document.getElementById('loginError').textContent = 'Debug: Default superuser recreated.';
-                        document.getElementById('loginError').classList.remove('hidden');
+                    if (typeof document !== 'undefined') {
+                        setTimeout(() => {
+                            const modal = document.getElementById('superuserModal');
+                            if (modal) modal.classList.remove('hidden');
+                            const form = document.getElementById('superuserForm');
+                            if (form) {
+                                form.onsubmit = (e) => {
+                                    e.preventDefault();
+                                    const name = document.getElementById('suName').value.trim();
+                                    const username = document.getElementById('suUsername').value.trim();
+                                    const password = document.getElementById('suPassword').value;
+                                    if (!name || !username || !password) return;
+                                    this.users = [{ id: this.generateId(), username, password, role: 'superuser', name }];
+                                    this.saveLocal();
+                                    if (modal) modal.classList.add('hidden');
+                                    location.reload();
+                                };
+                            }
+                        }, 100);
                     }
                 }
             }
@@ -244,14 +280,20 @@
             async syncWithCloud() {
                 if (!this.config.dbUrl) {
                     console.error('syncWithCloud: No dbUrl configured');
-                    document.getElementById('loginError').textContent = 'Debug: No Script URL (dbUrl) configured.';
-                    document.getElementById('loginError').classList.remove('hidden');
+                    const loginError = document.getElementById('loginError');
+                    if (loginError) {
+                        loginError.textContent = 'Debug: No Script URL (dbUrl) configured.';
+                        loginError.classList.remove('hidden');
+                    }
                     return;
                 }
                 ui.showLoading(true);
                 try {
                     console.log('syncWithCloud: Fetching from', this.config.dbUrl);
-                    const response = await fetch(this.config.dbUrl, { method: 'GET', redirect: 'follow', credentials: 'omit' });
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+                    const response = await fetch(this.config.dbUrl, { method: 'GET', redirect: 'follow', credentials: 'omit', signal: controller.signal });
+                    clearTimeout(timeoutId);
                     if (!response.ok) throw new Error('Network response was not ok: ' + response.status);
                     const cloudData = await response.json();
                     console.log('syncWithCloud: Received data', cloudData);
@@ -260,8 +302,11 @@
                         this.users = cloudData.users;
                     } else {
                         console.error('syncWithCloud: No users array or empty users from backend', cloudData.users);
-                        document.getElementById('loginError').textContent = 'Debug: No users returned from backend.';
-                        document.getElementById('loginError').classList.remove('hidden');
+                        const loginError = document.getElementById('loginError');
+                        if (loginError) {
+                            loginError.textContent = 'Debug: No users returned from backend.';
+                            loginError.classList.remove('hidden');
+                        }
                     }
                     if (cloudData.logs) this.logs = cloudData.logs;
                     if (cloudData.interests) this.interests = cloudData.interests;
@@ -269,8 +314,15 @@
                     this.saveLocal(); 
                 } catch (e) {
                     console.error("Sync Read Failed", e);
-                    document.getElementById('loginError').textContent = 'Debug: Sync failed - ' + e;
-                    document.getElementById('loginError').classList.remove('hidden');
+                    const loginError = document.getElementById('loginError');
+                    if (loginError) {
+                        if (e.name === 'AbortError') {
+                            loginError.textContent = 'Sync failed: Request timed out.';
+                        } else {
+                            loginError.textContent = 'Debug: Sync failed - ' + e;
+                        }
+                        loginError.classList.remove('hidden');
+                    }
                 } finally { ui.showLoading(false); }
             }
             async pushToCloud() {
@@ -610,7 +662,10 @@
                 if (!this.store.config.dbUrl || !this.store.config.appTitle) {
                     try {
                         let backendUrl = window.INIT_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbzHItA0cJehn2LiFmHaMDTftl6jPsI1Ffwtd9Gkfoo0c5g_LFBQN1lICHHai3qXn7nZPA/exec';
-                        const resp = await fetch(backendUrl);
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+                        const resp = await fetch(backendUrl, { signal: controller.signal });
+                        clearTimeout(timeoutId);
                         const data = await resp.json();
                         if (data.settings && data.settings.scriptUrl) {
                             this.store.config.dbUrl = data.settings.scriptUrl;
@@ -630,9 +685,12 @@
                 this.initSettingsAutocomplete();
                 this.populateAssignedToDropdown();
 
-                if (this.currentUser.role === 'superuser' || this.currentUser.role === 'admin') {
-                    document.getElementById('btnUserConfig').classList.remove('hidden');
-                    document.getElementById('btnUserConfig').classList.add('flex');
+                if (this.currentUser && (this.currentUser.role === 'superuser' || this.currentUser.role === 'admin')) {
+                    const btnUserConfig = document.getElementById('btnUserConfig');
+                    if (btnUserConfig) {
+                        btnUserConfig.classList.remove('hidden');
+                        btnUserConfig.classList.add('flex');
+                    }
                 }
 
                 if (this.store.config.dbUrl) {
@@ -652,9 +710,14 @@
 
             sync() { this.store.syncWithCloud(); }
             updateUserUI() {
-                document.getElementById('currentUserDisplay').textContent = this.currentUser.username;
-                document.getElementById('menuUserName').textContent = this.currentUser.name;
-                document.getElementById('menuUserRole').textContent = this.currentUser.role;
+                if (!this.currentUser) return;
+                const userDisplay = document.getElementById('currentUserDisplay');
+                if (userDisplay) userDisplay.textContent = this.currentUser.username;
+                const menuUserName = document.getElementById('menuUserName');
+                if (menuUserName) menuUserName.textContent = this.currentUser.name;
+                const menuUserRole = document.getElementById('menuUserRole');
+                if (menuUserRole) menuUserRole.textContent = this.currentUser.role;
+            }
             }
             applyConfig() {
                 const title = this.store.config.appTitle || 'LeadFlow';
