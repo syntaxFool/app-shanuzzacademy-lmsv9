@@ -851,22 +851,28 @@
                 c.innerHTML = this.store.logs.map(l => `<div class="px-6 py-4 flex gap-3 hover:bg-white"><div class="flex-col pt-1"><div class="w-2 h-2 rounded-full bg-slate-300"></div></div><div><div class="text-xs text-slate-400 mb-0.5">${new Date(l.timestamp).toLocaleString()}</div><div class="text-sm text-slate-700 font-medium">${this.escapeHtml(l.message)}</div></div></div>`).join('');
             }
 
-            switchModalTab(t) { 
-                this.currentModalTab = t; 
+            switchModalTab(t) {
+                this.currentModalTab = t;
                 ['info','activity','contact'].forEach(x => {
                     document.getElementById(`tab-btn-${x}`).className = x===t ? 'tab-active pb-3 font-semibold text-sm transition-colors whitespace-nowrap' : 'tab-inactive pb-3 font-semibold text-sm transition-colors whitespace-nowrap';
                     document.getElementById(`view-${x}`).classList.toggle('hidden', x!==t);
                     if(document.getElementById(`footer-${x}`)) document.getElementById(`footer-${x}`).classList.toggle('hidden', x!==t);
                 });
+                // Render content for activity/contact tabs
+                const leadId = document.getElementById('leadIdInput').value;
+                const lead = this.store.state.find(l => l.id === leadId);
+                if (t === 'activity' && lead) this.renderTimeline(lead);
+                if (t === 'contact' && lead) this.renderContactView(lead);
             }
 
             renderContactView(lead) {
                 const c = document.getElementById('contactActions');
                 if(!lead.phone) return c.innerHTML = '<div class="text-center text-slate-400"><p>No Phone</p></div>';
-                const cp = lead.phone.replace(/\D/g, '');
+                const phoneStr = String(lead.phone || '');
+                const cp = phoneStr.replace(/\D/g, '');
                 c.innerHTML = `
-                    <a href="tel:+91${lead.phone}" class="w-full bg-green-500 text-white rounded-2xl py-6 flex flex-col items-center justify-center gap-2 shadow-lg active:scale-95 transition"><i class="ph-fill ph-phone text-4xl"></i><span class="text-xl font-bold">Call</span><span class="text-sm opacity-90">${lead.phone}</span></a>
-                    <a href="https://wa.me/91${lead.phone}" target="_blank" class="w-full bg-[#25D366] text-white rounded-2xl py-6 flex flex-col items-center justify-center gap-2 shadow-lg active:scale-95 transition"><i class="ph-fill ph-whatsapp-logo text-4xl"></i><span class="text-xl font-bold">WhatsApp</span><span class="text-sm opacity-90">Open Chat</span></a>`;
+                    <a href="tel:+91${cp}" class="w-full bg-green-500 text-white rounded-2xl py-6 flex flex-col items-center justify-center gap-2 shadow-lg active:scale-95 transition"><i class="ph-fill ph-phone text-4xl"></i><span class="text-xl font-bold">Call</span><span class="text-sm opacity-90">${phoneStr}</span></a>
+                    <a href="https://wa.me/91${cp}" target="_blank" class="w-full bg-[#25D366] text-white rounded-2xl py-6 flex flex-col items-center justify-center gap-2 shadow-lg active:scale-95 transition"><i class="ph-fill ph-whatsapp-logo text-4xl"></i><span class="text-xl font-bold">WhatsApp</span><span class="text-sm opacity-90">Open Chat</span></a>`;
             }
 
             handleTypeChange(s) {
