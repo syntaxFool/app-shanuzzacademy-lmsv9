@@ -780,6 +780,7 @@
             applyConfig() {
                 const title = this.store.config.appTitle || 'LeadFlow';
                 document.getElementById('appTitleDisplay').textContent = title;
+                document.getElementById('loginTitle').textContent = title;
                 document.getElementById('configAppTitle').value = title;
                 document.getElementById('configDbUrl').value = 'https://script.google.com/macros/s/AKfycbzHItA0cJehn2LiFmHaMDTftl6jPsI1Ffwtd9Gkfoo0c5g_LFBQN1lICHHai3qXn7nZPA/exec';
             }
