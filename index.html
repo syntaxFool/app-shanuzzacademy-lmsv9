@@ -78,9 +78,9 @@
 <body class="bg-slate-50 text-slate-800 h-[100dvh] w-full flex flex-col overflow-hidden">
 
     <!-- LOADING OVERLAY -->
-    <div id="loadingOverlay" class="fixed inset-0 bg-slate-900/60 flex flex-col items-center justify-center hidden backdrop-blur-sm">
+    <div id="loadingOverlay" class="fixed inset-0 bg-slate-900/60 flex flex-col items-center justify-center backdrop-blur-sm z-[9999]">
         <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent mb-3"></div>
-        <div class="text-white font-bold text-sm" id="loadingText">Syncing...</div>
+        <div class="text-white font-bold text-sm" id="loadingText">Loading app...</div>
     </div>
 
     <!-- LOGIN SCREEN -->
@@ -944,8 +944,20 @@
 
         // Explicitly attach to window after DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
-            const store = new LeadStore();
-            window.app = new App(store);
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            loadingOverlay.classList.remove('hidden');
+            setTimeout(() => {
+                const store = new LeadStore();
+                window.app = new App(store);
+                // Wait for users to be loaded from cloud if dbUrl is set
+                if (store.config.dbUrl) {
+                    store.syncWithCloud().then(() => {
+                        loadingOverlay.classList.add('hidden');
+                    });
+                } else {
+                    loadingOverlay.classList.add('hidden');
+                }
+            }, 0);
         });
     </script>
 </body>
