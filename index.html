@@ -1,17 +1,34 @@
-<!-- Superuser Creation Modal -->
-<div id="superuserModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 hidden">
-    <div class="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
-        <h2 class="text-xl font-bold mb-4">Create Superuser Account</h2>
-        <form id="superuserForm" class="space-y-4">
-            <input type="text" id="suName" class="w-full border rounded p-2" placeholder="Full Name" required />
-            <input type="text" id="suUsername" class="w-full border rounded p-2" placeholder="Username" required />
-            <input type="password" id="suPassword" class="w-full border rounded p-2" placeholder="Password" required />
-            <button type="submit" class="w-full bg-primary text-white font-bold py-2 rounded">Create Superuser</button>
-        </form>
-    </div>
-</div>
 <!DOCTYPE html>
 <html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#4f46e5">
+    <!-- <meta name="apple-mobile-web-app-capable" content="yes"> -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>LeadFlow India</title>
+    <!-- Tailwind CSS (CDN used for development only; use npm/PostCSS or Tailwind CLI for production) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        /* ...existing styles... */
+    </style>
+</head>
+<body>
+    <!-- Superuser Creation Modal -->
+    <div id="superuserModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 hidden">
+        <div class="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
+            <h2 class="text-xl font-bold mb-4">Create Superuser Account</h2>
+            <form id="superuserForm" class="space-y-4">
+                <input type="text" id="suName" class="w-full border rounded p-2" placeholder="Full Name" required />
+                <input type="text" id="suUsername" class="w-full border rounded p-2" placeholder="Username" required />
+                <input type="password" id="suPassword" class="w-full border rounded p-2" placeholder="Password" required />
+                <button type="submit" class="w-full bg-primary text-white font-bold py-2 rounded">Create Superuser</button>
+            </form>
+        </div>
+    </div>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
