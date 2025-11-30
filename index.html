@@ -58,206 +58,34 @@
         .suggestion-item:last-child { border-bottom: none; }
         .suggestion-item:hover { background-color: #f8fafc; color: #4f46e5; }
 
-        @media (min-width: 768px) {
-            .mobile-only { display: none !important; }
-            .desktop-only { display: block !important; }
-            .kanban-board { display: flex !important; overflow-x: auto; }
-            .kanban-column { min-width: 320px; display: flex !important; }
-        }
-        @media (max-width: 767px) {
-            .desktop-only { display: none !important; }
-            .kanban-column { display: none; }
-            .kanban-column.active-mobile { display: flex; }
-            .modal-content { transform: translateY(100%); border-radius: 1.5rem 1.5rem 0 0; height: 90vh; margin-top: auto; }
-        }
-    </style>
-    <script>
-        tailwind.config = { theme: { extend: { colors: { primary: '#4f46e5', secondary: '#64748b', } } } }
-    </script>
-</head>
-<body class="bg-slate-50 text-slate-800 h-[100dvh] w-full flex flex-col overflow-hidden">
-
-    <!-- LOADING OVERLAY -->
-    <div id="loadingOverlay" class="fixed inset-0 bg-slate-900/60 flex flex-col items-center justify-center backdrop-blur-sm z-[9999]">
-        <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent mb-3"></div>
-        <div class="text-white font-bold text-sm" id="loadingText">Loading app...</div>
-    </div>
-
-    <!-- LOGIN SCREEN -->
-    <div id="loginScreen" class="fixed inset-0 bg-slate-900 flex items-center justify-center p-6">
-        <div class="bg-white w-full max-w-sm rounded-2xl p-8 shadow-2xl">
-            <div class="text-center mb-8">
-                <div class="inline-flex bg-primary/10 p-4 rounded-xl mb-4">
-                    <i class="ph-fill ph-kanban text-4xl text-primary"></i>
-                </div>
-                <h1 class="text-2xl font-bold text-slate-800" id="loginTitle">LeadFlow</h1>
-                <p class="text-slate-500 text-sm mt-1">Please sign in</p>
-            </div>
-            <form onsubmit="if(window.app){app.handleLogin(event);}else{event.preventDefault();document.getElementById('loginError').textContent='App not ready. Please wait and try again.';document.getElementById('loginError').classList.remove('hidden');}">
-                <div class="space-y-4">
-                    <div><label class="block text-sm font-semibold text-slate-700 mb-1.5">Username / ID</label><input type="text" name="username" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none transition" required></div>
-                    <div><label class="block text-sm font-semibold text-slate-700 mb-1.5">Password</label><input type="password" name="password" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none transition" required></div>
-                </div>
-                <p id="loginError" class="text-red-500 text-sm mt-3 text-center hidden">Invalid credentials</p>
-                <button type="submit" class="w-full bg-primary text-white font-bold text-lg py-3.5 rounded-xl shadow-lg shadow-primary/30 active:scale-[0.98] transition mt-8">Sign In</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- MAIN APP CONTENT -->
-    <div id="appContent" class="hidden h-full flex-col">
-        <header class="bg-white border-b border-slate-200 px-4 py-3 flex justify-between items-center shadow-sm z-20 shrink-0">
-            <div class="flex items-center gap-3">
-                <button onclick="ui.toggleMenu(true)" class="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg active:bg-slate-200 transition"><i class="ph-bold ph-list text-2xl"></i></button>
-                <div class="flex items-center gap-2"><div class="bg-primary/10 p-1.5 rounded-lg"><i class="ph-fill ph-kanban text-lg text-primary"></i></div><h1 id="appTitleDisplay" class="text-lg font-bold tracking-tight text-slate-900">LeadFlow</h1></div>
-            </div>
-            <div class="flex items-center gap-3">
-                <span id="currentUserDisplay" class="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-1 rounded hidden md:block"></span>
-                <button onclick="app.sync()" class="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition" title="Force Sync"><i class="ph-bold ph-arrows-clockwise text-xl"></i></button>
-            </div>
-        </header>
-
-        <!-- Mobile Tabs -->
-        <nav id="kanbanTabs" class="md:hidden bg-white border-b border-slate-200 py-2 overflow-x-auto no-scrollbar shrink-0 z-10"><div class="flex px-4 gap-3 min-w-max" id="mobileTabs"></div></nav>
-
-        <!-- Main Content -->
-        <main class="flex-1 overflow-hidden relative w-full">
-            <div id="kanbanView" class="h-full w-full">
-                <div class="kanban-board h-full w-full p-4 md:p-6 md:gap-6">
-                    <div id="boardContainer" class="h-full w-full flex md:gap-6"></div>
-                </div>
-            </div>
-            <div id="tableView" class="h-full w-full hidden overflow-auto bg-white">
-                <div class="min-w-[800px] p-6">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
-                                <th class="pb-3 font-bold pl-4">Name</th>
-                                <th class="pb-3 font-bold">Contact</th>
-                                <th class="pb-3 font-bold">Status</th>
-                                <th class="pb-3 font-bold">Interest</th>
-                                <th class="pb-3 font-bold">Source</th>
-                                <th class="pb-3 font-bold">Assigned</th>
-                                <th class="pb-3 font-bold text-right pr-4">Value</th>
-                                <th class="pb-3 font-bold w-10"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="tableBody" class="text-sm text-slate-700 divide-y divide-slate-100"></tbody>
-                    </table>
-                </div>
-            </div>
-        </main>
-
-        <button onclick="ui.toggleModal(true)" class="fixed bottom-6 right-6 md:bottom-8 md:right-8 bg-primary hover:bg-indigo-600 text-white w-14 h-14 rounded-full shadow-lg shadow-indigo-500/30 flex items-center justify-center transition transform active:scale-95 z-30"><i class="ph-bold ph-plus text-2xl"></i></button>
+    <!-- Add/Edit Lead Modal -->
+    <div id="leadModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+        <!-- ...existing code for lead modal... -->
     </div>
 
     <!-- SIDE MENU -->
     <div id="sideMenu" class="fixed inset-0 z-[60] hidden" role="dialog">
-        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="ui.toggleMenu(false)"></div>
-        <div class="menu-panel absolute inset-y-0 left-0 w-[85%] max-w-sm bg-white shadow-2xl flex flex-col">
-            <div class="p-6 border-b border-slate-100 bg-slate-50">
-                <h2 class="text-2xl font-bold text-slate-800 mb-1">Menu</h2>
-                <div class="flex items-center gap-2 text-sm text-slate-500"><i class="ph-fill ph-user"></i> <span id="menuUserName">User</span><span id="menuUserRole" class="text-xs bg-slate-200 px-1.5 py-0.5 rounded font-bold uppercase">Role</span></div>
-            </div>
-            <div class="flex-1 overflow-y-auto p-4 space-y-6">
-                <div>
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2"><i class="ph-bold ph-squares-four"></i> Views</h3>
-                    <div class="space-y-1">
-                        <button onclick="app.switchViewMode('kanban')" class="w-full text-left px-4 py-2.5 rounded-lg flex items-center gap-3 hover:bg-slate-50 transition text-slate-700"><i class="ph-bold ph-kanban text-lg"></i> <span class="font-medium">Kanban Board</span></button>
-                        <button onclick="app.switchViewMode('table')" class="w-full text-left px-4 py-2.5 rounded-lg flex items-center gap-3 hover:bg-slate-50 transition text-slate-700"><i class="ph-bold ph-table text-lg"></i> <span class="font-medium">Leads Table</span></button>
-                    </div>
-                </div>
-                <div>
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2"><i class="ph-bold ph-calendar-check"></i> Follow Ups</h3>
-                    <div class="space-y-4">
-                        <div class="bg-red-50 rounded-xl border border-red-100 overflow-hidden"><div class="px-4 py-3 bg-red-100/50 flex justify-between items-center border-b border-red-100"><span class="text-red-800 font-bold text-sm">Overdue</span><span id="count-overdue" class="bg-white text-red-600 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">0</span></div><div id="list-overdue" class="divide-y divide-red-100"></div></div>
-                        <div class="bg-amber-50 rounded-xl border border-amber-100 overflow-hidden"><div class="px-4 py-3 bg-amber-100/50 flex justify-between items-center border-b border-amber-100"><span class="text-amber-800 font-bold text-sm">Today</span><span id="count-today" class="bg-white text-amber-600 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">0</span></div><div id="list-today" class="divide-y divide-amber-100"></div></div>
-                        <div class="bg-blue-50 rounded-xl border border-blue-100 overflow-hidden"><div class="px-4 py-3 bg-blue-100/50 flex justify-between items-center border-b border-blue-100"><span class="text-blue-800 font-bold text-sm">Upcoming</span><span id="count-upcoming" class="bg-white text-blue-600 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">0</span></div><div id="list-upcoming" class="divide-y divide-blue-100 max-h-60 overflow-y-auto"></div></div>
-                    </div>
-                </div>
-                <div>
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2 mt-8"><i class="ph-bold ph-gear"></i> Settings</h3>
-                    <div class="space-y-3">
-                        <button onclick="ui.toggleLogs(true)" class="w-full text-left px-4 py-3 hover:bg-slate-50 transition active:bg-slate-100 flex justify-between items-center rounded-xl border border-slate-100 group shadow-sm bg-white"><div class="flex items-center gap-3"><div class="bg-slate-100 p-2 rounded-lg text-slate-600 group-hover:bg-primary/10 group-hover:text-primary transition-colors"><i class="ph-bold ph-list-dashes"></i></div><span class="font-medium text-slate-700">Session Logs</span></div><i class="ph-bold ph-caret-right text-slate-300"></i></button>
-                        <button id="btnUserConfig" onclick="ui.toggleConfig(true)" class="w-full text-left px-4 py-3 hover:bg-slate-50 transition active:bg-slate-100 flex justify-between items-center rounded-xl border border-slate-100 group shadow-sm bg-white"><div class="flex items-center gap-3"><div class="bg-slate-100 p-2 rounded-lg text-slate-600 group-hover:bg-primary/10 group-hover:text-primary transition-colors"><i class="ph-bold ph-user-gear"></i></div><span class="font-medium text-slate-700">User Config & DB</span></div><i class="ph-bold ph-caret-right text-slate-300"></i></button>
-                    </div>
-                </div>
-            </div>
-            <div class="p-4 border-t border-slate-100 text-center"><button onclick="app.logout()" class="text-red-500 font-bold text-sm hover:text-red-600 flex items-center justify-center gap-2 w-full py-2"><i class="ph-bold ph-sign-out"></i> Sign Out</button></div>
-        </div>
+        <!-- ...existing code for side menu... -->
     </div>
 
     <!-- Logs Modal -->
     <div id="logsModal" class="fixed inset-0 z-[70] hidden" role="dialog" aria-modal="true">
-        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="ui.toggleLogs(false)"></div>
-        <div class="modal-content absolute inset-x-0 bottom-0 md:relative md:inset-auto md:m-auto w-full md:w-[480px] md:h-[85vh] md:max-h-[800px] md:rounded-2xl bg-white shadow-2xl flex flex-col">
-            <div class="md:hidden w-full flex justify-center pt-3 pb-1" onclick="ui.toggleLogs(false)"><div class="w-12 h-1.5 bg-slate-200 rounded-full"></div></div>
-            <div class="px-6 py-4 border-b border-slate-100 shrink-0 flex justify-between items-center"><h3 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="ph-bold ph-scroll text-primary"></i> Session Logs</h3><button onclick="ui.toggleLogs(false)" class="hidden md:block p-1 text-slate-400 hover:text-slate-600 bg-slate-100 rounded-full"><i class="ph-bold ph-x text-lg"></i></button></div>
-            <div class="flex-1 overflow-y-auto p-0 bg-slate-50/50"><div id="logsContainer" class="divide-y divide-slate-100"></div></div>
-        </div>
+        <!-- ...existing code for logs modal... -->
     </div>
 
-
     <!-- User Config / Management Modal (moved to end of body for guaranteed z-index) -->
-    <!-- ...existing code... -->
+    <div id="configModal" class="fixed inset-0 z-[70] hidden" role="dialog" aria-modal="true">
+        <!-- ...existing code for config modal... -->
+    </div>
 
-
-    <!-- Add/Edit Lead Modal -->
-    <div id="leadModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
-        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="ui.toggleModal(false)"></div>
-        <div class="modal-content absolute inset-x-0 bottom-0 md:relative md:inset-auto md:m-auto w-full md:w-[480px] md:h-[85vh] md:max-h-[800px] md:rounded-2xl bg-white shadow-2xl flex flex-col">
-            <div class="md:hidden w-full flex justify-center pt-3 pb-1" onclick="ui.toggleModal(false)"><div class="w-12 h-1.5 bg-slate-200 rounded-full"></div></div>
-            <div class="px-6 pt-4 pb-0 border-b border-slate-100 shrink-0">
-                <div class="flex justify-between items-center mb-4"><h3 id="modalTitle" class="text-xl font-bold text-slate-800">New Lead</h3><button onclick="ui.toggleModal(false)" class="hidden md:block p-1 text-slate-400 hover:text-slate-600 bg-slate-100 rounded-full"><i class="ph-bold ph-x text-lg"></i></button></div>
-                <div class="flex gap-6 overflow-x-auto no-scrollbar"><button onclick="app.switchModalTab('info')" id="tab-btn-info" class="tab-active pb-3 font-semibold text-sm transition-colors whitespace-nowrap">Info</button><button onclick="app.switchModalTab('activity')" id="tab-btn-activity" class="tab-inactive pb-3 font-semibold text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap">Activity</button><button onclick="app.switchModalTab('contact')" id="tab-btn-contact" class="tab-inactive pb-3 font-semibold text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap">Contact</button></div>
-            </div>
-            <div class="flex-1 overflow-y-auto relative bg-slate-50/50">
-                <div id="view-info" class="p-6">
-                    <form id="leadForm" onsubmit="app.handleFormSubmit(event)">
-                        <input type="hidden" name="leadId" id="leadIdInput">
-                        <div class="space-y-5">
-                            <div><label class="block text-sm font-semibold text-slate-700 mb-1.5">Lead Name</label><input type="text" name="name" required class="w-full bg-white border-slate-200 border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition" placeholder="e.g. Acme Corp"></div>
-                            
-                            <!-- INTEREST (Autocomplete + Tags) -->
-                            <div>
-                                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Interest</label>
-                                <div class="relative">
-                                    <input type="text" id="interestInput" class="w-full bg-white border-slate-200 border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none transition" placeholder="Search or add interest..." autocomplete="off">
-                                    <div id="interestSuggestions" class="suggestions-box hidden"></div>
-                                </div>
-                                <div id="interestTags" class="flex flex-wrap gap-2 mt-2"></div>
-                                <input type="hidden" name="interest" id="interestHidden">
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-semibold text-slate-700 mb-1.5">Value</label><div class="relative"><span class="absolute left-4 top-3.5 text-slate-400">₹</span><input type="number" name="value" id="leadValue" min="0" step="0.01" class="w-full bg-white border-slate-200 border rounded-xl pl-8 pr-4 py-3 focus:ring-2 focus:ring-primary outline-none" placeholder="0"></div></div><div><label class="block text-sm font-semibold text-slate-700 mb-1.5">Status</label><select name="status" id="formStatusSelect" class="w-full bg-white border-slate-200 border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none appearance-none"></select></div></div>
-                            
-                            <!-- LOCATION (Autocomplete) -->
-                            <div>
-                                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Location</label>
-                                <div class="relative">
-                                    <input type="text" name="location" id="locationInput" class="w-full bg-white border-slate-200 border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none transition" placeholder="City, Area..." autocomplete="off">
-                                    <div id="locationSuggestions" class="suggestions-box hidden"></div>
-                                </div>
-                            </div>
-                            
-                            <!-- SOURCE (Autocomplete) -->
-                            <div>
-                                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Lead Source</label>
-                                <div class="relative">
-                                    <input type="text" name="source" id="sourceInput" class="w-full bg-white border-slate-200 border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none transition" placeholder="e.g. LinkedIn, Referral..." autocomplete="off">
-                                    <div id="sourceSuggestions" class="suggestions-box hidden"></div>
-                                </div>
-                            </div>
-                            
-                            <div><label class="block text-sm font-semibold text-slate-700 mb-1.5">Assigned To</label>
-                                <select name="assignedTo" id="assignedToSelect" class="w-full bg-white border-slate-200 border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none transition">
-                                    <option value="">Select User</option>
-                                </select>
-                            </div>
-                            <div><label class="block text-sm font-semibold text-slate-700 mb-1.5">Contact Details</label><input type="email" name="email" class="w-full bg-white border-slate-200 border rounded-xl px-4 py-3 mb-3 focus:ring-2 focus:ring-primary outline-none" placeholder="Email"><div class="relative flex items-stretch"><input type="text" name="phonePrefix" class="w-16 bg-slate-100 border-y border-l border-slate-200 rounded-l-xl text-center text-slate-700 font-medium text-sm focus:ring-2 focus:ring-primary focus:z-10 outline-none transition" value="+91" placeholder="+91"><input type="tel" name="phone" class="flex-1 bg-white border border-slate-200 rounded-r-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none transition" placeholder="98765 43210" pattern="\d{10}" maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10)"></div></div>
-                            <div><label class="block text-sm font-semibold text-slate-700 mb-1.5">Notes</label><textarea name="notes" rows="3" class="w-full bg-white border-slate-200 border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none resize-none"></textarea></div>
-                        </div>
-                    </form>
+    <script>
+        tailwind.config = { theme: { extend: { colors: { primary: '#4f46e5', secondary: '#64748b', } } } }
+    </script>
+    <script>
+        // ...all JS code (ui, App, LeadStore, DOMContentLoaded, etc.)
+    </script>
+</body>
+</html>
                 </div>
                 <div id="view-activity" class="hidden p-6"><div id="activityTimeline" class="space-y-0"></div></div>
                 <div id="view-contact" class="hidden p-6 h-full"><div id="contactActions" class="h-full flex flex-col justify-center items-center gap-6"></div></div>
