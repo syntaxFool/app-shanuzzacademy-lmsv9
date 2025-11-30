@@ -73,23 +73,28 @@ function doPost(e) {
       
       return ContentService.createTextOutput(JSON.stringify({ status: 'success' })).setMimeType(ContentService.MimeType.JSON);
     }
-    // New: Save ScriptURL to Settings
-    if (data.action === 'save_script_url' && data.scriptUrl) {
+    // New: Save ScriptURL and AppName to Settings
+    if (data.action === 'save_script_url' && (data.scriptUrl || data.appTitle)) {
       const settingsSheet = ss.getSheetByName('Settings');
       let settingsData = settingsSheet.getDataRange().getValues();
       // Ensure header row
       if (settingsData.length === 0) {
-        settingsSheet.appendRow(['Locations', 'Sources', 'ScriptURL']);
+        settingsSheet.appendRow(['Locations', 'Sources', 'ScriptURL', 'AppTitle']);
         settingsData = settingsSheet.getDataRange().getValues();
       }
-      // Find ScriptURL col
+      // Find ScriptURL and AppTitle columns
       const headers = settingsData[0];
       let scriptUrlCol = headers.indexOf('ScriptURL');
+      let appTitleCol = headers.indexOf('AppTitle');
       if (scriptUrlCol === -1) {
         scriptUrlCol = headers.length;
         headers.push('ScriptURL');
-        settingsSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
       }
+      if (appTitleCol === -1) {
+        appTitleCol = headers.length;
+        headers.push('AppTitle');
+      }
+      settingsSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
       // Ensure at least one data row
       if (settingsData.length < 2) {
         const row = [];
@@ -97,8 +102,9 @@ function doPost(e) {
         settingsSheet.appendRow(row);
         settingsData = settingsSheet.getDataRange().getValues();
       }
-      // Set ScriptURL value
-      settingsSheet.getRange(2, scriptUrlCol + 1).setValue(data.scriptUrl);
+      // Set ScriptURL and AppTitle values
+      if (data.scriptUrl) settingsSheet.getRange(2, scriptUrlCol + 1).setValue(data.scriptUrl);
+      if (data.appTitle) settingsSheet.getRange(2, appTitleCol + 1).setValue(data.appTitle);
       return ContentService.createTextOutput(JSON.stringify({ status: 'success' })).setMimeType(ContentService.MimeType.JSON);
     }
   } catch (error) {

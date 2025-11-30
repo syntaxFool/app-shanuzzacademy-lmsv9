@@ -23,3 +23,5 @@
    - Update your Google Apps Script URL in the app settings if needed.
 
 # For any dynamic backend, use Netlify Functions or external APIs.
+
+netlify deploy --prod

@@ -350,13 +350,13 @@
             async saveConfig(newConfig) {
                 this.config = { ...this.config, ...newConfig };
                 this.saveLocal();
-                // If superuser sets dbUrl, save to backend for all users
-                if (this.config.dbUrl && window.app && window.app.currentUser && window.app.currentUser.role === 'superuser') {
+                // If superuser sets dbUrl or appTitle, save to backend for all users
+                if ((this.config.dbUrl || this.config.appTitle) && window.app && window.app.currentUser && window.app.currentUser.role === 'superuser') {
                     try {
                         await fetch(this.config.dbUrl, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ action: 'save_script_url', scriptUrl: this.config.dbUrl })
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'save_script_url', scriptUrl: this.config.dbUrl, appTitle: this.config.appTitle })
                         });
                     } catch (e) { /* ignore */ }
                 }
@@ -636,17 +636,19 @@
             logout() { location.reload(); }
 
             async init() {
-                // If dbUrl is missing, try to fetch from backend (public endpoint)
-                if (!this.store.config.dbUrl) {
+                // If dbUrl or appTitle is missing, try to fetch from backend (public endpoint)
+                if (!this.store.config.dbUrl || !this.store.config.appTitle) {
                     try {
-                        // Use a default backend endpoint (hardcoded or from window.INIT_SCRIPT_URL)
                         let backendUrl = window.INIT_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbzHItA0cJehn2LiFmHaMDTftl6jPsI1Ffwtd9Gkfoo0c5g_LFBQN1lICHHai3qXn7nZPA/exec';
                         const resp = await fetch(backendUrl);
                         const data = await resp.json();
                         if (data.settings && data.settings.scriptUrl) {
                             this.store.config.dbUrl = data.settings.scriptUrl;
-                            this.store.saveLocal();
                         }
+                        if (data.settings && data.settings.appTitle) {
+                            this.store.config.appTitle = data.settings.appTitle;
+                        }
+                        this.store.saveLocal();
                     } catch (e) { /* ignore */ }
                 }
                 this.applyConfig();
