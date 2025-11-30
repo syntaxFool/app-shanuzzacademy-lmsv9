@@ -349,9 +349,10 @@
                     if (cloudData.logs) this.logs = cloudData.logs;
                     if (cloudData.interests) this.interests = cloudData.interests;
                     if (cloudData.settings) this.settings = cloudData.settings; 
-                    
+                    if (cloudData.appTitle) this.config.appTitle = cloudData.appTitle;
                     this.saveLocal(); 
                     if(window.app && typeof window.app.renderLeaderboard==='function'){window.app.renderLeaderboard();}
+                    if(window.app && typeof window.app.applyConfig==='function'){window.app.applyConfig();}
                 } catch (e) { console.error("Sync Read Failed", e); } finally { ui.showLoading(false); }
             }
             async pushToCloud() {
