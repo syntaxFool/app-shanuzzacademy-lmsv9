@@ -413,6 +413,11 @@
         }
 
         class App {
+                                                                                    switchTab(tabId) {
+                                                                                        this.activeMobileTab = tabId;
+                                                                                        this.render(this.store.state);
+                                                                                        this.renderTabs();
+                                                                                    }
                                                                         // --- LEADERBOARD RENDERING ---
                                                                         renderLeaderboard() {
                                                                             const container = document.getElementById('leaderboardContainer');
