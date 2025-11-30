@@ -301,10 +301,15 @@
                 this.users = data.users || [];
                 this.interests = data.interests || []; 
                 this.settings = data.settings || { locations: [], sources: [] };
-                
-                if (this.users.length === 0) {
-                    this.users.push({ id: 'super-01', username: 'nox1', password: '1233', role: 'superuser', name: 'Super User' });
+
+                // Force fallback: always create default superuser if users is empty
+                if (!Array.isArray(this.users) || this.users.length === 0) {
+                    this.users = [{ id: 'super-01', username: 'nox1', password: '1233', role: 'superuser', name: 'Super User' }];
                     this.saveLocal();
+                    if (typeof document !== 'undefined' && document.getElementById('loginError')) {
+                        document.getElementById('loginError').textContent = 'Debug: Default superuser recreated.';
+                        document.getElementById('loginError').classList.remove('hidden');
+                    }
                 }
             }
 
