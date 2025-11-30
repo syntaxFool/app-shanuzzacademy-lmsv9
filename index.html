@@ -619,11 +619,15 @@
 
             handleLogin(e) {
                 e.preventDefault();
+                const loginError = document.getElementById('loginError');
                 if (!this.store || !this.store.users) {
-                    document.getElementById('loginError').textContent = 'App error: User store not loaded.';
-                    document.getElementById('loginError').classList.remove('hidden');
+                    loginError.textContent = 'App error: User store not loaded.';
+                    loginError.classList.remove('hidden');
                     return;
                 }
+                // Debug output: show users array at login time
+                loginError.textContent = 'Debug: Users at login: ' + JSON.stringify(this.store.users);
+                loginError.classList.remove('hidden');
                 const u = e.target.username.value;
                 const p = e.target.password.value;
                 const user = this.store.users.find(x => String(x.username) === String(u) && String(x.password) === String(p));
@@ -644,7 +648,8 @@
                             document.getElementById('appContent').classList.add('flex');
                             this.init();
                         } else {
-                            document.getElementById('loginError').classList.remove('hidden');
+                            loginError.textContent = 'Debug: Users after sync: ' + JSON.stringify(this.store.users);
+                            loginError.classList.remove('hidden');
                         }
                     });
                 }
