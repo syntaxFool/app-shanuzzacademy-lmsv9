@@ -176,6 +176,10 @@
                     </div>
                 </div>
                 <div>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2 mt-8"><i class="ph-bold ph-trophy"></i> Leaderboard</h3>
+                    <div id="leaderboardContainer" class="space-y-2"></div>
+                </div>
+                <div>
                     <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2 mt-8"><i class="ph-bold ph-gear"></i> Settings</h3>
                     <div class="space-y-3">
                         <button onclick="ui.toggleLogs(true)" class="w-full text-left px-4 py-3 hover:bg-slate-50 transition active:bg-slate-100 flex justify-between items-center rounded-xl border border-slate-100 group shadow-sm bg-white"><div class="flex items-center gap-3"><div class="bg-slate-100 p-2 rounded-lg text-slate-600 group-hover:bg-primary/10 group-hover:text-primary transition-colors"><i class="ph-bold ph-list-dashes"></i></div><span class="font-medium text-slate-700">Session Logs</span></div><i class="ph-bold ph-caret-right text-slate-300"></i></button>
@@ -345,6 +349,7 @@
                     if (cloudData.settings) this.settings = cloudData.settings; 
                     
                     this.saveLocal(); 
+                    if(window.app && typeof window.app.renderLeaderboard==='function'){window.app.renderLeaderboard();}
                 } catch (e) { console.error("Sync Read Failed", e); } finally { ui.showLoading(false); }
             }
             async pushToCloud() {
@@ -362,14 +367,50 @@
             saveConfig(newConfig) { this.config = { ...this.config, ...newConfig }; this.saveLocal(); if (this.config.dbUrl) this.syncWithCloud(); }
             log(msg, user) { const prefix = user ? `${user.name} (${user.role}): ` : 'System: '; this.logs.unshift({ id: this.generateId(), timestamp: new Date().toISOString(), message: prefix + msg }); if (this.logs.length > 50) this.logs.pop(); this.save(); }
             add(data, user) { this.state.push({ id: this.generateId(), createdAt: new Date().toISOString(), activities: [], ...data }); this.log(`Created lead ${data.name}`, user); this.save(); }
+                        if(window.app && typeof window.app.renderLeaderboard==='function'){window.app.renderLeaderboard();}
             update(id, data, user) { const idx = this.state.findIndex(l => l.id === id); if (idx !== -1) { this.state[idx] = { ...this.state[idx], ...data }; this.log(`Updated ${data.name}`, user); this.save(); } }
+                        if(window.app && typeof window.app.renderLeaderboard==='function'){window.app.renderLeaderboard();}
             delete(id, user) { const l = this.state.find(x => x.id === id); this.state = this.state.filter(x => x.id !== id); this.log(`Deleted ${l ? l.name : 'Lead'}`, user); this.save(); }
+                        if(window.app && typeof window.app.renderLeaderboard==='function'){window.app.renderLeaderboard();}
             updateStatus(id, status, user) { const l = this.state.find(x => x.id === id); if (l) { l.status = status; this.log(`Moved ${l.name} to ${status}`, user); this.save(); } }
+                        if(window.app && typeof window.app.renderLeaderboard==='function'){window.app.renderLeaderboard();}
             addActivity(id, activity, user) { const l = this.state.find(x => x.id === id); if (l) { if(!l.activities) l.activities = []; l.activities.unshift({ id: this.generateId(), timestamp: new Date().toISOString(), createdBy: user ? user.name : 'System', role: user ? user.role : '', ...activity }); this.log(`Logged activity for ${l.name}`, user); this.save(); } }
+                        if(window.app && typeof window.app.renderLeaderboard==='function'){window.app.renderLeaderboard();}
             reset() { this.state = []; this.logs = []; this.save(); }
         }
 
         class App {
+                                                                        // --- LEADERBOARD RENDERING ---
+                                                                        renderLeaderboard() {
+                                                                            const container = document.getElementById('leaderboardContainer');
+                                                                            if (!container) return;
+                                                                            // Aggregate scores by user
+                                                                            const userScores = {};
+                                                                            (this.store.state || []).forEach(lead => {
+                                                                                if (lead.assignedTo) {
+                                                                                    if (!userScores[lead.assignedTo]) userScores[lead.assignedTo] = 0;
+                                                                                    // Score: 1 per lead, +1 per 100k value, +1 per activity
+                                                                                    let score = 1;
+                                                                                    if (lead.value && lead.value > 0) score += Math.floor(lead.value / 100000);
+                                                                                    if (Array.isArray(lead.activities)) score += lead.activities.length;
+                                                                                    userScores[lead.assignedTo] += score;
+                                                                                }
+                                                                            });
+                                                                            // Convert to array and sort
+                                                                            const sorted = Object.entries(userScores).sort((a, b) => b[1] - a[1]);
+                                                                            if (sorted.length === 0) {
+                                                                                container.innerHTML = '<div class="text-slate-400 text-sm">No leaderboard data yet.</div>';
+                                                                                return;
+                                                                            }
+                                                                            container.innerHTML = sorted.map(([user, score], i) => `
+                                                                                <div class="flex items-center gap-3 p-2 rounded-lg ${i === 0 ? 'bg-yellow-100 border border-yellow-300' : 'bg-slate-50'}">
+                                                                                    <span class="font-bold text-lg w-6 text-center">${i + 1}</span>
+                                                                                    <span class="flex-1 font-medium text-slate-700">${this.escapeHtml(user)}</span>
+                                                                                    <span class="font-bold text-primary">${score}</span>
+                                                                                    ${i === 0 ? '<i class="ph-bold ph-crown text-yellow-500"></i>' : ''}
+                                                                                </div>
+                                                                            `).join('');
+                                                                        }
                                                             // --- LEAD SCORING & TEMPERATURE ---
                                                             getLeadScores(lead) {
                                                                 // Quality: based on value, interest, assignedTo, etc.
@@ -426,6 +467,7 @@
                                             table.classList.remove('hidden');
                                         }
                                         this.render(this.store.state);
+                                        this.renderLeaderboard();
                                     }
                         // Render the activity timeline for a lead in the modal
                         renderTimeline(lead) {
@@ -709,6 +751,7 @@
                 this.store.addUser({ username: e.target.newUsername.value, password: e.target.newPassword.value, name: e.target.newName.value, role: role });
                 e.target.reset(); this.renderUserList();
                 this.populateAssignedToDropdown();
+                if(window.app && typeof window.app.renderLeaderboard==='function'){window.app.renderLeaderboard();}
             }
             deleteUser(id) { if(confirm('Remove user?')) { if(!this.store.deleteUser(id)) alert('Cannot delete Superuser'); this.renderUserList(); } }
             renderUserList() {
@@ -721,6 +764,7 @@
                 e.preventDefault();
                 this.store.saveConfig({ appTitle: e.target.appTitle.value, dbUrl: e.target.dbUrl.value });
                 this.applyConfig();
+                if(window.app && typeof window.app.renderLeaderboard==='function'){window.app.renderLeaderboard();}
                 alert('Saved');
             }
 
@@ -748,6 +792,7 @@
                 if (typeof this.switchTab === 'function') {
                     this.switchTab(d.status);
                 }
+                if(window.app && typeof window.app.renderLeaderboard==='function'){window.app.renderLeaderboard();}
                 ui.toggleModal(false);
             }
             handleAddActivity(e) {
@@ -814,7 +859,7 @@
             renderTabs() { document.getElementById('mobileTabs').innerHTML = this.statusConfig.map(s => `<button onclick="app.switchTab('${s.id}')" class="px-4 py-2 rounded-full text-sm font-semibold border ${this.activeMobileTab === s.id ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200'}">${s.id}</button>`).join(''); }
             
             render(leads) {
-                if (this.activeView === 'table') { this.renderTable(leads); return; }
+                if (this.activeView === 'table') { this.renderTable(leads); this.renderLeaderboard(); return; }
                 const b = document.getElementById('boardContainer'); b.innerHTML = '';
                 this.statusConfig.forEach(s => {
                     const sl = leads.filter(l => l.status === s.id);
@@ -833,6 +878,7 @@
                             <div class="bg-white/50 border-t border-slate-200 p-2 text-center text-xs text-slate-500 font-medium">Total: ${this.formatCurrency(sum)}</div>
                         </div>`;
                 });
+                this.renderLeaderboard();
             }
 
             createCardHTML(lead) {
@@ -963,6 +1009,11 @@
 
         // Explictly attach to window
         window.app = new App();
+            document.addEventListener('DOMContentLoaded', function() {
+                if (window.app && typeof window.app.renderLeaderboard === 'function') {
+                    window.app.renderLeaderboard();
+                }
+            });
     </script>
 </body>
 </html>
