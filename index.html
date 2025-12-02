@@ -195,21 +195,15 @@
     <div id="logsModal" class="fixed inset-0 z-[70] hidden" role="dialog" aria-modal="true">
         <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="ui.toggleLogs(false)"></div>
         <div class="modal-content absolute inset-x-0 bottom-0 md:relative md:inset-auto md:m-auto w-full md:w-[480px] md:h-[85vh] md:max-h-[800px] md:rounded-2xl bg-white shadow-2xl flex flex-col">
-            <!-- Mobile Back Button -->
+            <!-- Mobile Back Button (only) -->
             <button type="button" onclick="ui.toggleLogs(false)" class="absolute top-4 left-4 md:hidden flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 focus:outline-none z-10">
                 <i class="ph-bold ph-arrow-left text-xl text-primary"></i>
-            </button>
-            <!-- Mobile Exit Button -->
-            <button type="button" onclick="ui.toggleLogs(false)" class="absolute top-4 right-4 md:hidden flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 focus:outline-none z-10">
-                <i class="ph-bold ph-x text-xl text-primary"></i>
             </button>
             <div class="md:hidden w-full flex justify-center pt-3 pb-1" onclick="ui.toggleLogs(false)"><div class="w-12 h-1.5 bg-slate-200 rounded-full"></div></div>
             <div class="px-6 py-4 border-b border-slate-100 shrink-0 flex justify-between items-center">
                 <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="ph-bold ph-scroll text-primary"></i> Session Logs</h3>
-                <!-- Desktop Back Button -->
-                <button onclick="ui.toggleLogs(false)" class="hidden md:block p-1 mr-2 text-slate-400 hover:text-slate-600 bg-slate-100 rounded-full"><i class="ph-bold ph-arrow-left text-lg"></i></button>
-                <!-- Desktop Exit Button -->
-                <button onclick="ui.toggleLogs(false)" class="hidden md:block p-1 text-slate-400 hover:text-slate-600 bg-slate-100 rounded-full"><i class="ph-bold ph-x text-lg"></i></button>
+                <!-- Desktop Back Button (only) -->
+                <button onclick="ui.toggleLogs(false)" class="hidden md:block p-1 text-slate-400 hover:text-slate-600 bg-slate-100 rounded-full"><i class="ph-bold ph-arrow-left text-lg"></i></button>
             </div>
             <div class="flex-1 overflow-y-auto p-0 bg-slate-50/50"><div id="logsContainer" class="divide-y divide-slate-100"></div></div>
         </div>
@@ -219,20 +213,14 @@
     <div id="configModal" class="fixed inset-0 z-[70] hidden" role="dialog" aria-modal="true">
         <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="ui.toggleConfig(false)"></div>
         <div class="modal-content absolute inset-x-0 bottom-0 md:relative md:inset-auto md:m-auto w-full md:w-[480px] md:h-auto md:max-h-[90vh] md:rounded-2xl bg-white shadow-2xl flex flex-col">
-            <!-- Mobile Back Button -->
-            <button type="button" onclick="ui.toggleConfig(false)" class="absolute top-4 left-4 md:hidden flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 focus:outline-none z-10">
-                <i class="ph-bold ph-arrow-left text-xl text-primary"></i>
-            </button>
-            <!-- Mobile Exit Button -->
+            <!-- Mobile Exit Button (only) -->
             <button type="button" onclick="ui.toggleConfig(false)" class="absolute top-4 right-4 md:hidden flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 focus:outline-none z-10">
                 <i class="ph-bold ph-x text-xl text-primary"></i>
             </button>
             <div class="md:hidden w-full flex justify-center pt-3 pb-1" onclick="ui.toggleConfig(false)"><div class="w-12 h-1.5 bg-slate-200 rounded-full"></div></div>
             <div class="px-6 py-4 border-b border-slate-100 shrink-0 flex justify-between items-center">
                 <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="ph-bold ph-user-gear text-primary"></i> User Config</h3>
-                <!-- Desktop Back Button -->
-                <button onclick="ui.toggleConfig(false)" class="hidden md:block p-1 mr-2 text-slate-400 hover:text-slate-600 bg-slate-100 rounded-full"><i class="ph-bold ph-arrow-left text-lg"></i></button>
-                <!-- Desktop Exit Button -->
+                <!-- Desktop Exit Button (only) -->
                 <button onclick="ui.toggleConfig(false)" class="hidden md:block p-1 text-slate-400 hover:text-slate-600 bg-slate-100 rounded-full"><i class="ph-bold ph-x text-lg"></i></button>
             </div>
             <div class="flex-1 overflow-y-auto p-6">
@@ -247,11 +235,7 @@
     <div id="leadModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
         <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="ui.toggleModal(false)"></div>
         <div class="modal-content absolute inset-x-0 bottom-0 md:relative md:inset-auto md:m-auto w-full md:w-[480px] md:h-[85vh] md:max-h-[800px] md:rounded-2xl bg-white shadow-2xl flex flex-col">
-            <!-- Mobile Back Button -->
-            <button type="button" onclick="ui.toggleModal(false)" class="absolute top-4 left-4 md:hidden flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 focus:outline-none z-10">
-                <i class="ph-bold ph-arrow-left text-xl text-primary"></i>
-            </button>
-            <!-- Mobile Exit Button -->
+            <!-- Mobile Exit Button (only) -->
             <button type="button" onclick="ui.toggleModal(false)" class="absolute top-4 right-4 md:hidden flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 focus:outline-none z-10">
                 <i class="ph-bold ph-x text-xl text-primary"></i>
             </button>
@@ -259,9 +243,7 @@
             <div class="px-6 pt-4 pb-0 border-b border-slate-100 shrink-0">
                 <div class="flex justify-between items-center mb-4">
                     <h3 id="modalTitle" class="text-xl font-bold text-slate-800">New Lead</h3>
-                    <!-- Desktop Back Button -->
-                    <button onclick="ui.toggleModal(false)" class="hidden md:block p-1 mr-2 text-slate-400 hover:text-slate-600 bg-slate-100 rounded-full"><i class="ph-bold ph-arrow-left text-lg"></i></button>
-                    <!-- Desktop Exit Button -->
+                    <!-- Desktop Exit Button (only) -->
                     <button onclick="ui.toggleModal(false)" class="hidden md:block p-1 text-slate-400 hover:text-slate-600 bg-slate-100 rounded-full"><i class="ph-bold ph-x text-lg"></i></button>
                 </div>
                 <div class="flex gap-6 overflow-x-auto no-scrollbar"><button onclick="app.switchModalTab('info')" id="tab-btn-info" class="tab-active pb-3 font-semibold text-sm transition-colors whitespace-nowrap">Info</button><button onclick="app.switchModalTab('activity')" id="tab-btn-activity" class="tab-inactive pb-3 font-semibold text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap">Activity</button><button onclick="app.switchModalTab('contact')" id="tab-btn-contact" class="tab-inactive pb-3 font-semibold text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap">Contact</button></div>
