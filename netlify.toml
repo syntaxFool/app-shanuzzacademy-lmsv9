@@ -2,7 +2,7 @@
 
 
 [build]
-  publish = "Shanuzz Academy LMS - v9 - Sheet"
+  publish = "."
   command = ""
 
 [build.environment]
