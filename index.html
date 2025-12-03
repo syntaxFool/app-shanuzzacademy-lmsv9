@@ -77,6 +77,13 @@
 </head>
 <body class="bg-slate-50 text-slate-800 h-[100dvh] w-full flex flex-col overflow-hidden">
 
+    <!-- NOTIFICATION TRAY -->
+    <div id="notificationTray" class="fixed top-3 left-1/2 -translate-x-1/2 z-[100] bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 text-sm font-semibold transition-all duration-300 opacity-0 pointer-events-none">
+        <i class="ph-bold ph-bell"></i>
+        <span id="notificationMessage">You have a new lead assigned!</span>
+        <button onclick="ui.hideNotification()" class="ml-4 text-white/80 hover:text-white"><i class="ph-bold ph-x"></i></button>
+    </div>
+
     <!-- LOADING OVERLAY -->
     <div id="loadingOverlay" class="fixed inset-0 bg-slate-900/60 flex flex-col items-center justify-center hidden backdrop-blur-sm">
         <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent mb-3"></div>
@@ -106,6 +113,15 @@
 
     <!-- MAIN APP CONTENT -->
     <div id="appContent" class="hidden h-full flex-col">
+                <!-- NOTIFICATION BOX -->
+                <div id="notificationBox" class="fixed top-16 left-1/2 -translate-x-1/2 z-[101] w-80 max-w-full bg-white border border-slate-200 rounded-xl shadow-xl p-4 hidden">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-bold text-slate-800 text-base flex items-center gap-2"><i class="ph-bold ph-bell text-green-600"></i> Notifications</h4>
+                        <button onclick="ui.toggleNotificationBox()" class="text-slate-400 hover:text-slate-600"><i class="ph-bold ph-x"></i></button>
+                    </div>
+                    <div id="notificationList" class="space-y-3 max-h-64 overflow-y-auto"></div>
+                    <div id="notificationEmpty" class="text-slate-400 text-sm text-center py-6">No notifications</div>
+                </div>
         <header class="bg-white border-b border-slate-200 px-4 py-3 flex justify-between items-center shadow-sm z-20 shrink-0">
             <div class="flex items-center gap-3">
                 <button onclick="ui.toggleMenu(true)" class="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg active:bg-slate-200 transition"><i class="ph-bold ph-list text-2xl"></i></button>
@@ -113,8 +129,21 @@
             </div>
             <div class="flex items-center gap-3">
                 <span id="currentUserDisplay" class="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-1 rounded hidden md:block"></span>
+                <button onclick="ui.toggleNotificationBox()" class="p-2 text-green-600 hover:bg-green-50 rounded-full transition relative" title="Notifications">
+                    <i class="ph-bold ph-bell text-xl"></i>
+                    <span id="notificationCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold" style="display:none;">0</span>
+                </button>
                 <button onclick="app.sync()" class="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition" title="Force Sync"><i class="ph-bold ph-arrows-clockwise text-xl"></i></button>
             </div>
+                <!-- NOTIFICATION BOX -->
+                <div id="notificationBox" class="fixed top-16 left-1/2 -translate-x-1/2 z-[101] w-80 max-w-full bg-white border border-slate-200 rounded-xl shadow-xl p-4 hidden">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-bold text-slate-800 text-base flex items-center gap-2"><i class="ph-bold ph-bell text-green-600"></i> Notifications</h4>
+                        <button onclick="ui.toggleNotificationBox()" class="text-slate-400 hover:text-slate-600"><i class="ph-bold ph-x"></i></button>
+                    </div>
+                    <div id="notificationList" class="space-y-3 max-h-64 overflow-y-auto"></div>
+                    <div id="notificationEmpty" class="text-slate-400 text-sm text-center py-6">No notifications</div>
+                </div>
         </header>
 
         <!-- Mobile Tabs -->
@@ -180,11 +209,7 @@
                     <div id="leaderboardContainer" class="space-y-2"></div>
                 </div>
                 <div>
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2 mt-8"><i class="ph-bold ph-gear"></i> Settings</h3>
-                    <div class="space-y-3">
-                        <button onclick="ui.toggleLogs(true)" class="w-full text-left px-4 py-3 hover:bg-slate-50 transition active:bg-slate-100 flex justify-between items-center rounded-xl border border-slate-100 group shadow-sm bg-white"><div class="flex items-center gap-3"><div class="bg-slate-100 p-2 rounded-lg text-slate-600 group-hover:bg-primary/10 group-hover:text-primary transition-colors"><i class="ph-bold ph-list-dashes"></i></div><span class="font-medium text-slate-700">Session Logs</span></div><i class="ph-bold ph-caret-right text-slate-300"></i></button>
-                        <button id="btnUserConfig" onclick="ui.toggleConfig(true)" class="w-full text-left px-4 py-3 hover:bg-slate-50 transition active:bg-slate-100 flex justify-between items-center rounded-xl border border-slate-100 group shadow-sm bg-white"><div class="flex items-center gap-3"><div class="bg-slate-100 p-2 rounded-lg text-slate-600 group-hover:bg-primary/10 group-hover:text-primary transition-colors"><i class="ph-bold ph-user-gear"></i></div><span class="font-medium text-slate-700">User Config & DB</span></div><i class="ph-bold ph-caret-right text-slate-300"></i></button>
-                    </div>
+                    <div id="settingsSection"></div>
                 </div>
             </div>
             <div class="p-4 border-t border-slate-100 text-center"><button onclick="app.logout()" class="text-red-500 font-bold text-sm hover:text-red-600 flex items-center justify-center gap-2 w-full py-2"><i class="ph-bold ph-sign-out"></i> Sign Out</button></div>
@@ -444,6 +469,78 @@
         }
 
         class App {
+                                                                                                                        addNotification(msg) {
+                                                                                                                            if (!this._notifications) this._notifications = [];
+                                                                                                                            this._notifications.unshift({ msg, ts: new Date().toLocaleString() });
+                                                                                                                            if (this._notifications.length > 20) this._notifications.pop();
+                                                                                                                            this.renderNotificationBox();
+                                                                                                                        }
+
+                                                                                                                        renderNotificationBox() {
+                                                                                                                            const list = document.getElementById('notificationList');
+                                                                                                                            const empty = document.getElementById('notificationEmpty');
+                                                                                                                            const count = document.getElementById('notificationCount');
+                                                                                                                            if (!this._notifications || this._notifications.length === 0) {
+                                                                                                                                list.innerHTML = '';
+                                                                                                                                empty.style.display = '';
+                                                                                                                                count.style.display = 'none';
+                                                                                                                                return;
+                                                                                                                            }
+                                                                                                                            list.innerHTML = this._notifications.map(n => `<div class=\"bg-green-50 border border-green-100 rounded-lg px-3 py-2 flex items-center gap-2\"><i class=\"ph-bold ph-bell text-green-600\"></i><div><div class=\"font-semibold text-slate-700 text-sm\">${n.msg}</div><div class=\"text-xs text-slate-400\">${n.ts}</div></div></div>`).join('');
+                                                                                                                            empty.style.display = 'none';
+                                                                                                                            count.textContent = this._notifications.length;
+                                                                                                                            count.style.display = '';
+                                                                                                                        }
+                                                                                                            startAutoSync() {
+                                                                                                                // Store last assigned lead IDs for notification
+                                                                                                                this._lastAssignedLeadIds = new Set();
+                                                                                                                // Initial population
+                                                                                                                this.updateAssignedLeadIds();
+                                                                                                                setInterval(() => {
+                                                                                                                    this.autoSyncWithNotification();
+                                                                                                                }, 2400000); // Sync every 40 minutes
+                                                                                                            }
+
+                                                                                                            updateAssignedLeadIds() {
+                                                                                                                if (!this.currentUser || !(this.currentUser.role === 'agent' || this.currentUser.role === 'user')) return;
+                                                                                                                const assignedLeads = this.store.state.filter(lead => lead.assignedTo === this.currentUser.username || lead.assignedTo === this.currentUser.id);
+                                                                                                                this._lastAssignedLeadIds = new Set(assignedLeads.map(l => l.id));
+                                                                                                            }
+
+                                                                                                            async autoSyncWithNotification() {
+                                                                                                                if (!this.currentUser || !(this.currentUser.role === 'agent' || this.currentUser.role === 'user')) return;
+                                                                                                                const prevIds = new Set(this._lastAssignedLeadIds);
+                                                                                                                await this.store.syncWithCloud();
+                                                                                                                const assignedLeads = this.store.state.filter(lead => lead.assignedTo === this.currentUser.username || lead.assignedTo === this.currentUser.id);
+                                                                                                                const newAssigned = assignedLeads.filter(l => !prevIds.has(l.id));
+                                                                                                                if (newAssigned.length > 0) {
+                                                                                                                    this.showNotification(`New lead assigned: ${newAssigned[0].name}`);
+                                                                                                                }
+                                                                                                                this._lastAssignedLeadIds = new Set(assignedLeads.map(l => l.id));
+                                                                                                            }
+                                                                                                showNotification(msg) {
+                                                                                                    const tray = document.getElementById('notificationTray');
+                                                                                                    document.getElementById('notificationMessage').textContent = msg || 'You have a new lead assigned!';
+                                                                                                    tray.classList.remove('opacity-0', 'pointer-events-none');
+                                                                                                    tray.classList.add('opacity-100');
+                                                                                                    if (this._notifTimeout) clearTimeout(this._notifTimeout);
+                                                                                                    this._notifTimeout = setTimeout(() => {
+                                                                                                        tray.classList.add('opacity-0', 'pointer-events-none');
+                                                                                                        tray.classList.remove('opacity-100');
+                                                                                                    }, 5000);
+                                                                                                    this.addNotification(msg);
+                                                                                                }
+
+                                                                                                // Show notification if a new lead is assigned to the current user
+                                                                                                handleLeadAssignment(lead, prevAssignedTo) {
+                                                                                                    if (!this.currentUser) return;
+                                                                                                    // Only notify if the current user is agent/user and the lead is now assigned to them
+                                                                                                    if ((this.currentUser.role === 'agent' || this.currentUser.role === 'user') &&
+                                                                                                        (lead.assignedTo === this.currentUser.username || lead.assignedTo === this.currentUser.id) &&
+                                                                                                        prevAssignedTo !== lead.assignedTo) {
+                                                                                                        this.showNotification(`New lead assigned: ${lead.name}`);
+                                                                                                    }
+                                                                                                }
                                                                                     switchTab(tabId) {
                                                                                         this.activeMobileTab = tabId;
                                                                                         this.render(this.store.state);
@@ -508,7 +605,12 @@
                                                 renderTable(leads) {
                                                     const tbody = document.getElementById('tableBody');
                                                     if (!tbody) return;
-                                                    tbody.innerHTML = leads.map(lead => `
+                                                    // Filter for agent/user: only show assigned leads
+                                                    let filteredLeads = leads;
+                                                    if (this.currentUser && (this.currentUser.role === 'agent' || this.currentUser.role === 'user')) {
+                                                        filteredLeads = leads.filter(lead => lead.assignedTo === this.currentUser.username || lead.assignedTo === this.currentUser.id);
+                                                    }
+                                                    tbody.innerHTML = filteredLeads.map(lead => `
                                                         <tr class="table-row-hover">
                                                             <td class="pl-4 py-2 font-bold">${this.escapeHtml(lead.name)}</td>
                                                             <td class="py-2">${this.escapeHtml(lead.phone || '')}<br><span class="text-xs text-slate-400">${this.escapeHtml(lead.email || '')}</span></td>
@@ -786,8 +888,11 @@
                 this.populateAssignedToDropdown();
 
                 if (this.currentUser.role === 'superuser' || this.currentUser.role === 'admin') {
-                    document.getElementById('btnUserConfig').classList.remove('hidden');
-                    document.getElementById('btnUserConfig').classList.add('flex');
+                    const btnUserConfig = document.getElementById('btnUserConfig');
+                    if (btnUserConfig) {
+                        btnUserConfig.classList.remove('hidden');
+                        btnUserConfig.classList.add('flex');
+                    }
                 }
 
                 if (this.store.config.dbUrl) {
@@ -884,8 +989,17 @@
                     phone: fullPhone,
                     notes: f.notes.value
                 };
-                if (f.leadId.value) this.store.update(f.leadId.value, d, this.currentUser);
-                else this.store.add(d, this.currentUser);
+                let prevAssignedTo = null;
+                if (f.leadId.value) {
+                    const oldLead = this.store.state.find(l => l.id === f.leadId.value);
+                    prevAssignedTo = oldLead ? oldLead.assignedTo : null;
+                    this.store.update(f.leadId.value, d, this.currentUser);
+                } else {
+                    this.store.add(d, this.currentUser);
+                    // For new leads, prevAssignedTo is null
+                }
+                // Show notification if assigned to current user
+                this.handleLeadAssignment(d, prevAssignedTo);
                 if (typeof this.switchTab === 'function') {
                     this.switchTab(d.status);
                 }
@@ -956,10 +1070,15 @@
             renderTabs() { document.getElementById('mobileTabs').innerHTML = this.statusConfig.map(s => `<button onclick="app.switchTab('${s.id}')" class="px-4 py-2 rounded-full text-sm font-semibold border ${this.activeMobileTab === s.id ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200'}">${s.id}</button>`).join(''); }
             
             render(leads) {
-                if (this.activeView === 'table') { this.renderTable(leads); this.renderLeaderboard(); return; }
+                // Filter for agent/user: only show assigned leads
+                let filteredLeads = leads;
+                if (this.currentUser && (this.currentUser.role === 'agent' || this.currentUser.role === 'user')) {
+                    filteredLeads = leads.filter(lead => lead.assignedTo === this.currentUser.username || lead.assignedTo === this.currentUser.id);
+                }
+                if (this.activeView === 'table') { this.renderTable(filteredLeads); this.renderLeaderboard(); return; }
                 const b = document.getElementById('boardContainer'); b.innerHTML = '';
                 this.statusConfig.forEach(s => {
-                    const sl = leads.filter(l => l.status === s.id);
+                    const sl = filteredLeads.filter(l => l.status === s.id);
                     const sum = sl.reduce((a,c) => a + (c.value||0), 0);
                     const hide = this.activeMobileTab !== s.id ? 'hidden md:flex' : 'flex';
                     b.innerHTML += `
@@ -1019,7 +1138,12 @@
             renderFollowUps() {
                 const today = new Date().toISOString().split('T')[0];
                 let od=[], td=[], uc=[];
-                this.store.state.forEach(l => {
+                // Filter for agent/user: only show follow-ups for assigned leads
+                let leads = this.store.state;
+                if (this.currentUser && (this.currentUser.role === 'agent' || this.currentUser.role === 'user')) {
+                    leads = leads.filter(lead => lead.assignedTo === this.currentUser.username || lead.assignedTo === this.currentUser.id);
+                }
+                leads.forEach(l => {
                     const f = l.activities?.find(a => a.type==='follow_up');
                     if(f && f.note) {
                         const d = { ...l, followUpDate: f.note };
@@ -1077,6 +1201,15 @@
         }
 
         const ui = {
+                                    toggleNotificationBox: () => {
+                                        const box = document.getElementById('notificationBox');
+                                        if (box) box.classList.toggle('hidden');
+                                    },
+                        hideNotification: () => {
+                            const tray = document.getElementById('notificationTray');
+                            tray.classList.add('opacity-0', 'pointer-events-none');
+                            tray.classList.remove('opacity-100');
+                        },
             toggleModal: (s) => { 
                 const m = document.getElementById('leadModal'); 
                 if(s) { 
@@ -1110,6 +1243,9 @@
         document.addEventListener('DOMContentLoaded', function() {
             if (window.app && typeof window.app.applyConfig === 'function') {
                 window.app.applyConfig();
+            }
+            if (window.app && typeof window.app.startAutoSync === 'function') {
+                window.app.startAutoSync();
             }
             if (window.app && typeof window.app.renderLeaderboard === 'function') {
                 window.app.renderLeaderboard();
