@@ -424,26 +424,28 @@
             </div>
             <div id="modalFooter" class="p-4 border-t border-slate-100 shrink-0 md:rounded-b-2xl bg-white pb-8 md:pb-4">
                 <div id="footer-info"><button id="submitBtn" type="button" onclick="document.getElementById('leadForm').dispatchEvent(new Event('submit', {cancelable: true, bubbles: true}))" class="w-full bg-primary text-white font-bold text-lg py-3.5 rounded-xl shadow-lg shadow-primary/30 active:scale-[0.98] transition">Save Lead</button></div>
-                <div id="footer-activity" class="hidden">
-                    <form onsubmit="app.handleAddActivity(event)" class="flex gap-2 items-center">
-                        <select name="type" id="activityTypeSelect" onchange="app.handleTypeChange(this)" class="bg-slate-50 border border-slate-200 rounded-xl px-2 py-3 outline-none focus:ring-2 focus:ring-primary text-sm min-w-[100px] font-medium text-slate-700"><option value="call">Call</option><option value="whatsapp">WhatsApp</option><option value="meeting">Meet</option><option value="follow_up">Next Follow-Up</option><option value="file">Add File</option><option value="note">Note</option></select>
-                        <div class="flex-1 relative">
-                            <input type="text" id="activityInputText" name="noteText" required placeholder="Log details..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary">
-                            <input type="date" id="activityInputDate" name="noteDate" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary hidden">
-                             <input type="file" id="activityInputFile" name="noteFile" class="w-full text-sm text-slate-500 bg-slate-50 border border-slate-200 rounded-xl file:mr-4 file:py-3 file:px-4 file:rounded-l-xl file:border-0 file:text-sm file:font-semibold file:bg-slate-200 file:text-slate-700 hover:file:bg-slate-300 hidden">
-                        </div>
-                        <button type="submit" class="bg-slate-800 text-white rounded-xl w-12 h-[46px] flex items-center justify-center hover:bg-slate-700 active:scale-95 transition shrink-0 shadow-sm"><i class="ph-bold ph-paper-plane-right text-xl"></i></button>
-                    </form>
-                </div>
+                <div id="footer-activity" class="hidden"></div>
                 <div id="footer-task" class="hidden">
-                    <form onsubmit="app.handleAddTask(event)" class="flex flex-col gap-2">
+                    <form onsubmit="app.handleAddTask(event)" class="flex flex-col gap-2 mb-4">
                         <input type="text" id="taskInput" placeholder="Task title..." required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm">
                         <div class="flex gap-2">
                             <input type="date" id="taskDueDate" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm">
-                            <select id="taskStatus" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm"><option value="pending">Pending</option><option value="in_progress">In Progress</option><option value="completed">Completed</option></select>
                             <button type="submit" class="bg-slate-800 text-white rounded-xl px-4 py-3 hover:bg-slate-700 active:scale-95 transition shadow-sm font-medium text-sm"><i class="ph-bold ph-plus"></i> Add</button>
                         </div>
                     </form>
+                    <div id="taskDetailForm" class="hidden flex flex-col gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 id="taskDetailTitle" class="font-semibold text-slate-700"></h3>
+                            <button type="button" onclick="app.closeTaskDetail()" class="text-slate-400 hover:text-slate-600"><i class="ph-bold ph-x text-lg"></i></button>
+                        </div>
+                        <div id="taskDetailInfo" class="text-sm text-slate-600 space-y-1"></div>
+                        <textarea id="taskNoteBox" placeholder="Add a note..." class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary resize-none h-20"></textarea>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="app.updateTaskStatus('completed')" class="flex-1 bg-green-500 text-white rounded-lg px-3 py-2 hover:bg-green-600 active:scale-95 transition font-medium text-sm"><i class="ph-bold ph-check mr-1"></i>Complete</button>
+                            <button type="button" onclick="app.updateTaskStatus('dropped')" class="flex-1 bg-red-500 text-white rounded-lg px-3 py-2 hover:bg-red-600 active:scale-95 transition font-medium text-sm"><i class="ph-bold ph-x mr-1"></i>Drop</button>
+                            <button type="button" onclick="app.saveTaskNote()" class="flex-1 bg-primary text-white rounded-lg px-3 py-2 hover:bg-primary/90 active:scale-95 transition font-medium text-sm"><i class="ph-bold ph-floppy-disk mr-1"></i>Save</button>
+                        </div>
+                    </div>
                 </div>
                 <div id="footer-contact" class="hidden"></div>
             </div>
@@ -1490,17 +1492,21 @@
                 const id = document.getElementById('leadIdInput').value;
                 const title = document.getElementById('taskInput').value;
                 const dueDate = document.getElementById('taskDueDate').value;
-                const status = document.getElementById('taskStatus').value;
                 
                 if(id && title) {
                     const lead = this.store.state.find(l => l.id === id);
                     if(lead) {
                         if(!lead.tasks) lead.tasks = [];
-                        lead.tasks.push({ title, dueDate, status, createdAt: new Date().toISOString() });
+                        lead.tasks.push({ title, dueDate, status: 'pending', createdAt: new Date().toISOString() });
+                        // Add activity log for task creation
+                        this.store.addActivity(id, { type: 'task', note: `Task created: Pending: ${title}${dueDate ? ' (Due: ' + new Date(dueDate).toLocaleDateString('en-IN') + ')' : ''}` }, this.currentUser);
+                        // Add follow-up activity if due date exists
+                        if(dueDate) {
+                            this.store.addActivity(id, { type: 'follow_up', note: dueDate }, this.currentUser);
+                        }
                         this.store.save();
                         document.getElementById('taskInput').value = '';
                         document.getElementById('taskDueDate').value = '';
-                        document.getElementById('taskStatus').value = 'pending';
                         this.renderTaskView(lead);
                     }
                 }
@@ -1678,18 +1684,81 @@
                     return t.innerHTML = '<div class="text-center text-slate-400 py-8"><p>No tasks yet</p></div>';
                 }
                 t.innerHTML = lead.tasks.map((task, i) => `
-                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start justify-between gap-3">
+                    <div onclick="app.openTaskDetail('${lead.id}', ${i})" class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-100 transition">
                         <div class="flex-1 min-w-0">
                             <p class="font-semibold text-slate-700 break-words">${this.escapeHtml(task.title)}</p>
-                            ${task.description ? `<p class="text-sm text-slate-500 mt-1 break-words">${this.escapeHtml(task.description)}</p>` : ''}
-                            <div class="flex gap-2 items-center mt-2 text-xs text-slate-500">
-                                <span class="px-2 py-1 rounded-full ${task.status === 'completed' ? 'bg-green-100 text-green-700' : task.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}">${task.status || 'pending'}</span>
-                                <span>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-IN') : 'No due date'}</span>
+                            <div class="flex gap-3 items-center mt-2 text-xs text-slate-500">
+                                <span class="px-2 py-1 rounded-full ${task.status === 'completed' ? 'bg-green-100 text-green-700' : task.status === 'dropped' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'} font-medium">${task.status || 'pending'}</span>
+                                <span>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-IN') : ''}</span>
                             </div>
                         </div>
-                        <button onclick="app.deleteTask('${lead.id}', ${i})" class="text-slate-400 hover:text-red-500 transition p-1" title="Delete task"><i class="ph ph-trash text-lg"></i></button>
+                        <button onclick="event.stopPropagation(); app.deleteTask('${lead.id}', ${i})" class="text-slate-400 hover:text-red-500 transition p-1 shrink-0" title="Delete task"><i class="ph ph-trash text-lg"></i></button>
                     </div>
                 `).join('');
+            }
+
+            openTaskDetail(leadId, taskIndex) {
+                this.currentEditingTask = { leadId, taskIndex };
+                const lead = this.store.state.find(l => l.id === leadId);
+                if(!lead || !lead.tasks || !lead.tasks[taskIndex]) return;
+                const task = lead.tasks[taskIndex];
+                document.getElementById('taskDetailTitle').textContent = this.escapeHtml(task.title);
+                document.getElementById('taskDetailInfo').innerHTML = `
+                    <div><strong>Status:</strong> ${task.status || 'pending'}</div>
+                    <div><strong>Due Date:</strong> ${task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-IN') : 'No due date'}</div>
+                `;
+                document.getElementById('taskNoteBox').value = task.note || '';
+                document.getElementById('taskDetailForm').classList.remove('hidden');
+            }
+
+            closeTaskDetail() {
+                document.getElementById('taskDetailForm').classList.add('hidden');
+                this.currentEditingTask = null;
+            }
+
+            updateTaskStatus(status) {
+                if(!this.currentEditingTask) return;
+                const noteBox = document.getElementById('taskNoteBox');
+                const note = noteBox.value.trim();
+                
+                // Make note mandatory for completed/dropped tasks
+                if(!note) {
+                    alert('Please add a note before completing or dropping the task');
+                    return;
+                }
+                
+                const { leadId, taskIndex } = this.currentEditingTask;
+                const lead = this.store.state.find(l => l.id === leadId);
+                if(lead && lead.tasks && lead.tasks[taskIndex]) {
+                    const taskTitle = lead.tasks[taskIndex].title;
+                    lead.tasks[taskIndex].status = status;
+                    lead.tasks[taskIndex].note = note;
+                    lead.tasks[taskIndex].completedAt = new Date().toISOString();
+                    
+                    // Add activity log
+                    this.store.addActivity(leadId, { type: 'task', note: `Task ${status}: ${taskTitle} - ${note}` }, this.currentUser);
+                    
+                    // Remove associated follow-up activity
+                    if(lead.activities) {
+                        lead.activities = lead.activities.filter(a => !(a.type === 'follow_up' && a.note === lead.tasks[taskIndex].dueDate));
+                    }
+                    
+                    this.store.save();
+                    this.renderTaskView(lead);
+                    this.closeTaskDetail();
+                }
+            }
+
+            saveTaskNote() {
+                if(!this.currentEditingTask) return;
+                const { leadId, taskIndex } = this.currentEditingTask;
+                const lead = this.store.state.find(l => l.id === leadId);
+                if(lead && lead.tasks && lead.tasks[taskIndex]) {
+                    lead.tasks[taskIndex].note = document.getElementById('taskNoteBox').value;
+                    this.store.save();
+                    this.renderTaskView(lead);
+                    this.closeTaskDetail();
+                }
             }
 
             deleteTask(leadId, taskIndex) {
