@@ -9,17 +9,19 @@ function doGet() {
   const logs = readSheet(ss.getSheetByName('Logs'));
   const interests = readSheet(ss.getSheetByName('Interests'));
   
-  // Read Settings Sheet (Col 1 = Location, Col 2 = Source, Col 3 = ScriptURL, Col 4 = AppTitle)
+  // Read Settings Sheet (Col 1 = Location, Col 2 = Source, Col 3 = ScriptURL, Col 4 = AppTitle, Col 5 = TaskTitles)
   const settingsSheet = ss.getSheetByName('Settings');
   const settingsData = settingsSheet ? settingsSheet.getDataRange().getValues() : [];
   let locations = [];
   let sources = [];
+  let taskTitles = [];
   let scriptUrl = '';
   let appTitle = '';
   if (settingsData.length > 0) {
     const headers = settingsData[0];
     const scriptUrlCol = headers.indexOf('ScriptURL');
     const appTitleCol = headers.indexOf('AppTitle');
+    const taskTitlesCol = headers.indexOf('TaskTitles');
     if (scriptUrlCol !== -1 && settingsData.length > 1) {
       scriptUrl = settingsData[1][scriptUrlCol] || '';
     }
@@ -29,6 +31,7 @@ function doGet() {
     for (let i = 1; i < settingsData.length; i++) {
       if (settingsData[i][0]) locations.push(settingsData[i][0]);
       if (settingsData[i][1]) sources.push(settingsData[i][1]);
+      if (taskTitlesCol !== -1 && settingsData[i][taskTitlesCol]) taskTitles.push(settingsData[i][taskTitlesCol]);
     }
   }
 
@@ -44,7 +47,7 @@ function doGet() {
     users: users,
     logs: logs,
     interests: interests,
-    settings: { locations: locations, sources: sources, scriptUrl: scriptUrl },
+    settings: { locations: locations, sources: sources, taskTitles: taskTitles, scriptUrl: scriptUrl },
     config: { appTitle: appTitle }
   })).setMimeType(ContentService.MimeType.JSON);
 }

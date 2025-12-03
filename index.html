@@ -427,7 +427,14 @@
                 <div id="footer-activity" class="hidden"></div>
                 <div id="footer-task" class="hidden">
                     <form onsubmit="app.handleAddTask(event)" class="flex flex-col gap-2 mb-4">
-                        <input type="text" id="taskInput" placeholder="Task title..." required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm">
+                        <div class="relative">
+                            <input type="text" id="taskInput" placeholder="Task title..." required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm">
+                            <div id="taskSuggestions" class="suggestions-box hidden"></div>
+                        </div>
+                        <div class="relative">
+                            <textarea id="taskNote" placeholder="Task note (max 15 words)..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm resize-none h-12" onkeyup="app.validateTaskNoteLength(this)"></textarea>
+                            <span id="taskNoteCount" class="absolute bottom-2 right-3 text-xs text-slate-400">0/15</span>
+                        </div>
                         <div class="flex gap-2">
                             <input type="date" id="taskDueDate" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm">
                             <button type="submit" class="bg-slate-800 text-white rounded-xl px-4 py-3 hover:bg-slate-700 active:scale-95 transition shadow-sm font-medium text-sm"><i class="ph-bold ph-plus"></i> Add</button>
@@ -465,7 +472,7 @@
                 this.config.dbUrl = 'https://script.google.com/macros/s/AKfycbxevXBoOPZkOq82wHla6WKrOiGhnrNM7FXKtHmeItMOnUp0vBOYF13lcBRAE3Gtfw/exec';
                 this.users = data.users || [];
                 this.interests = data.interests || []; 
-                this.settings = data.settings || { locations: [], sources: [] };
+                this.settings = data.settings || { locations: [], sources: [], taskTitles: [] };
                 
                 if (this.users.length === 0) {
                     this.users.push({ id: 'super-01', username: 'nox1', password: '1233', role: 'superuser', name: 'Super User' });
@@ -1276,6 +1283,7 @@
             initSettingsAutocomplete() {
                 const locations = this.store.settings.locations || [];
                 const sources = this.store.settings.sources || [];
+                const taskTitles = this.store.settings.taskTitles || [];
 
                 this.setupAutocomplete('locationInput', 'locationSuggestions', locations, (selected) => {
                     document.getElementById('locationInput').value = selected;
@@ -1283,6 +1291,10 @@
 
                 this.setupAutocomplete('sourceInput', 'sourceSuggestions', sources, (selected) => {
                     document.getElementById('sourceInput').value = selected;
+                });
+
+                this.setupAutocomplete('taskInput', 'taskSuggestions', taskTitles, (selected) => {
+                    document.getElementById('taskInput').value = selected;
                 });
             }
 
@@ -1498,24 +1510,47 @@
                 e.preventDefault();
                 const id = document.getElementById('leadIdInput').value;
                 const title = document.getElementById('taskInput').value;
+                const taskNote = document.getElementById('taskNote').value;
                 const dueDate = document.getElementById('taskDueDate').value;
                 
                 if(id && title) {
                     const lead = this.store.state.find(l => l.id === id);
                     if(lead) {
                         if(!lead.tasks) lead.tasks = [];
-                        lead.tasks.push({ id: this.store.generateId(), title, dueDate, status: 'pending', createdAt: new Date().toISOString() });
+                        lead.tasks.push({ id: this.store.generateId(), title, note: taskNote, dueDate, status: 'pending', createdAt: new Date().toISOString() });
                         // Add activity log for task creation
-                        this.store.addActivity(id, { type: 'task', note: `Task created: Pending: ${title}${dueDate ? ' (Due: ' + new Date(dueDate).toLocaleDateString('en-IN') + ')' : ''}` }, this.currentUser);
+                        const activityNote = `Task created: Pending: ${title}${taskNote ? ' - ' + taskNote : ''}${dueDate ? ' (Due: ' + new Date(dueDate).toLocaleDateString('en-IN') + ')' : ''}`;
+                        this.store.addActivity(id, { type: 'task', note: activityNote }, this.currentUser);
                         // Add follow-up activity if due date exists
                         if(dueDate) {
                             this.store.addActivity(id, { type: 'follow_up', note: dueDate }, this.currentUser);
                         }
                         this.store.save();
                         document.getElementById('taskInput').value = '';
+                        document.getElementById('taskNote').value = '';
+                        document.getElementById('taskNoteCount').textContent = '0/15';
                         document.getElementById('taskDueDate').value = '';
                         this.renderTaskView(lead);
                     }
+                }
+            }
+
+            validateTaskNoteLength(textarea) {
+                const words = textarea.value.trim().split(/\s+/).filter(w => w.length > 0);
+                const wordCount = textarea.value.trim() === '' ? 0 : words.length;
+                const countDisplay = document.getElementById('taskNoteCount');
+                
+                if (wordCount > 15) {
+                    textarea.value = words.slice(0, 15).join(' ');
+                    countDisplay.textContent = '15/15';
+                } else {
+                    countDisplay.textContent = wordCount + '/15';
+                }
+                
+                if (wordCount > 12) {
+                    countDisplay.classList.add('text-amber-600');
+                } else {
+                    countDisplay.classList.remove('text-amber-600');
                 }
             }
             moveLead(id, s) { this.store.updateStatus(id, s, this.currentUser); }
@@ -1695,6 +1730,7 @@
                     <div onclick="app.openTaskDetail('${lead.id}', ${i})" class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-100 transition">
                         <div class="flex-1 min-w-0">
                             <p class="font-semibold text-slate-700 break-words">${this.escapeHtml(task.title)}</p>
+                            ${task.note ? `<p class="text-xs text-slate-600 mt-1 break-words">${this.escapeHtml(task.note)}</p>` : ''}
                             <div class="flex gap-3 items-center mt-2 text-xs text-slate-500">
                                 <span class="px-2 py-1 rounded-full ${task.status === 'completed' ? 'bg-green-100 text-green-700' : task.status === 'dropped' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'} font-medium">${task.status || 'pending'}</span>
                                 <span>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-IN') : ''}</span>
