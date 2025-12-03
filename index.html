@@ -158,6 +158,40 @@
             </div>
             <div id="tableView" class="h-full w-full hidden overflow-auto bg-white">
                 <div class="min-w-[800px] p-6">
+                    <!-- Filter Bar -->
+                    <div class="mb-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                        <div class="flex items-center gap-3 mb-3">
+                            <i class="ph-bold ph-funnel text-slate-600"></i>
+                            <h4 class="font-semibold text-slate-700">Filters</h4>
+                            <button onclick="app.clearFilters()" class="ml-auto text-sm text-slate-500 hover:text-slate-700 underline">Clear All</button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <!-- Search -->
+                            <div>
+                                <label class="text-xs font-semibold text-slate-600 block mb-1">Search Name/Email/Phone</label>
+                                <input type="text" id="filterSearch" placeholder="Type to search..." oninput="app.applyFilters()" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none">
+                            </div>
+                            <!-- Status Filter -->
+                            <div>
+                                <label class="text-xs font-semibold text-slate-600 block mb-1">Status</label>
+                                <select id="filterStatus" onchange="app.applyFilters()" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none">
+                                    <option value="">All Status</option>
+                                    <option value="New">New</option>
+                                    <option value="Contacted">Contacted</option>
+                                    <option value="Proposal">Proposal</option>
+                                    <option value="Won">Won</option>
+                                    <option value="Lost">Lost</option>
+                                </select>
+                            </div>
+                            <!-- Assigned To Filter -->
+                            <div>
+                                <label class="text-xs font-semibold text-slate-600 block mb-1">Assigned To</label>
+                                <select id="filterAssignedTo" onchange="app.applyFilters()" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none">
+                                    <option value="">All Agents</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                     <!-- Bulk Actions Bar -->
                     <div id="bulkActionsBar" class="hidden mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex justify-between items-center">
                         <div class="flex items-center gap-2">
@@ -424,7 +458,11 @@
                     this.saveLocal(); 
                     if(window.app && typeof window.app.applyConfig==='function'){window.app.applyConfig();}
                     if(window.app && typeof window.app.renderLeaderboard==='function'){window.app.renderLeaderboard();}
-                } catch (e) { console.error("Sync Read Failed", e); } finally { ui.showLoading(false); }
+                } catch (e) { 
+                    console.warn("Cloud sync unavailable, using local data:", e.message); 
+                } finally { 
+                    ui.showLoading(false); 
+                }
             }
             async pushToCloud() {
                 if (!this.config.dbUrl) return;
@@ -432,7 +470,12 @@
                 try {
                     const payload = { action: 'save_all', leads: this.state, users: this.users, logs: this.logs, config: this.config };
                     await fetch(this.config.dbUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) });
-                } catch (e) { console.error("Sync Write Failed", e); } finally { ui.showLoading(false); }
+                    console.log('Data pushed to cloud successfully');
+                } catch (e) { 
+                    console.warn("Cloud sync unavailable, data saved locally:", e.message); 
+                } finally { 
+                    ui.showLoading(false); 
+                }
             }
             save() { this.saveLocal(); this.pushToCloud(); }
             getCounts() { return { admins: this.users.filter(u => u.role === 'admin').length, agents: this.users.filter(u => u.role === 'agent').length }; }
@@ -641,6 +684,8 @@
                                                     if (this.currentUser && (this.currentUser.role === 'agent' || this.currentUser.role === 'user')) {
                                                         filteredLeads = leads.filter(lead => lead.assignedTo === this.currentUser.username || lead.assignedTo === this.currentUser.id);
                                                     }
+                                                    // Apply custom filters (search, status, assigned-to)
+                                                    filteredLeads = this.filterLeads(filteredLeads);
                                                     // Apply sorting
                                                     filteredLeads = this.getSortedLeads(filteredLeads);
                                                     // Populate bulk assign dropdown if admin/superuser
@@ -657,6 +702,19 @@
                                                             });
                                                             assignSelect.value = currentVal;
                                                         }
+                                                        // Also populate filter dropdown
+                                                        const filterAssignedTo = document.getElementById('filterAssignedTo');
+                                                        if (filterAssignedTo) {
+                                                            const currentVal = filterAssignedTo.value;
+                                                            filterAssignedTo.innerHTML = '<option value="">All Agents</option>';
+                                                            this.store.users.filter(u => u.role === 'admin' || u.role === 'agent').forEach(u => {
+                                                                const opt = document.createElement('option');
+                                                                opt.value = u.username || u.id;
+                                                                opt.textContent = u.name;
+                                                                filterAssignedTo.appendChild(opt);
+                                                            });
+                                                            filterAssignedTo.value = currentVal;
+                                                        }
                                                     }
                                                     tbody.innerHTML = filteredLeads.map(lead => `
                                                         <tr class="table-row-hover">
@@ -666,7 +724,7 @@
                                                             <td class="py-2">${this.escapeHtml(lead.status)}</td>
                                                             <td class="py-2">${this.escapeHtml(lead.interest)}</td>
                                                             <td class="py-2">${this.escapeHtml(lead.source)}</td>
-                                                            <td class="py-2">${this.escapeHtml(lead.assignedTo)}</td>
+                                                            <td class="py-2">${this.escapeHtml(this.getUserName(lead.assignedTo))}</td>
                                                             <td class="py-2 text-right pr-4">${this.formatCurrency(lead.value)}</td>
                                                             <td class="py-2 text-right">
                                                                 <button onclick="app.editLead('${lead.id}')" class="text-primary hover:underline text-xs font-bold">Edit</button>
@@ -731,6 +789,81 @@
                                                     
                                                     return sorted;
                                                 }
+
+                                                // Apply filters to leads
+                                                applyFilters() {
+                                                    // Get filter values from UI
+                                                    const searchInput = document.getElementById('filterSearch');
+                                                    const statusSelect = document.getElementById('filterStatus');
+                                                    const assignedSelect = document.getElementById('filterAssignedTo');
+                                                    
+                                                    if (searchInput) this.filters.search = searchInput.value.toLowerCase().trim();
+                                                    if (statusSelect) this.filters.status = statusSelect.value;
+                                                    if (assignedSelect) this.filters.assignedTo = assignedSelect.value;
+                                                    
+                                                    // Re-render with filtered and sorted data
+                                                    this.render(this.store.state);
+                                                }
+
+                                                // Clear all filters
+                                                clearFilters() {
+                                                    this.filters = {
+                                                        search: '',
+                                                        status: '',
+                                                        assignedTo: ''
+                                                    };
+                                                    
+                                                    // Reset UI
+                                                    const searchInput = document.getElementById('filterSearch');
+                                                    const statusSelect = document.getElementById('filterStatus');
+                                                    const assignedSelect = document.getElementById('filterAssignedTo');
+                                                    
+                                                    if (searchInput) searchInput.value = '';
+                                                    if (statusSelect) statusSelect.value = '';
+                                                    if (assignedSelect) assignedSelect.value = '';
+                                                    
+                                                    // Re-render
+                                                    this.render(this.store.state);
+                                                }
+
+                                                // Apply filters to leads array
+                                                filterLeads(leads) {
+                                                    let filtered = leads;
+                                                    
+                                                    // Apply search filter (name, email, phone)
+                                                    if (this.filters.search) {
+                                                        filtered = filtered.filter(lead => {
+                                                            const search = this.filters.search;
+                                                            return (lead.name && lead.name.toLowerCase().includes(search)) ||
+                                                                   (lead.email && lead.email.toLowerCase().includes(search)) ||
+                                                                   (lead.phone && lead.phone.toLowerCase().includes(search));
+                                                        });
+                                                    }
+                                                    
+                                                    // Apply status filter
+                                                    if (this.filters.status) {
+                                                        filtered = filtered.filter(lead => lead.status === this.filters.status);
+                                                    }
+                                                    
+                                                    // Apply assigned-to filter
+                                                    if (this.filters.assignedTo) {
+                                                        filtered = filtered.filter(lead => lead.assignedTo === this.filters.assignedTo);
+                                                    }
+                                                    
+                                                    return filtered;
+                                                }
+
+                                                // Get user name from username/id
+                                                getUserName(username) {
+                                                    if (!username) return '';
+                                                    // Try to find user by username or id
+                                                    const user = this.store.users.find(u => {
+                                                        return String(u.username).toLowerCase() === String(username).toLowerCase() || 
+                                                               String(u.id).toLowerCase() === String(username).toLowerCase();
+                                                    });
+                                                    return user && user.name ? user.name : username;
+                                                }
+
                                     // Switch between Kanban and Table views
                                     switchViewMode(mode) {
                                         this.activeView = mode;
@@ -973,6 +1106,11 @@
                 this.selectedInterests = [];
                 this.sortColumn = null;
                 this.sortDirection = 'asc';
+                this.filters = {
+                    search: '',
+                    status: '',
+                    assignedTo: ''
+                };
                 // Always update login card/app title on construction
                 if (typeof this.applyConfig === 'function') this.applyConfig();
                 this.store.subscribe((data) => {
