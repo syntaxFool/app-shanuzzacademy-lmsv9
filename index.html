@@ -368,7 +368,7 @@
                     <!-- Desktop Exit Button (only) -->
                     <button onclick="ui.toggleModal(false)" class="hidden md:block p-1 text-slate-400 hover:text-slate-600 bg-slate-100 rounded-full"><i class="ph-bold ph-x text-lg"></i></button>
                 </div>
-                <div class="flex gap-6 overflow-x-auto no-scrollbar"><button onclick="app.switchModalTab('info')" id="tab-btn-info" class="tab-active pb-3 font-semibold text-sm transition-colors whitespace-nowrap">Info</button><button onclick="app.switchModalTab('activity')" id="tab-btn-activity" class="tab-inactive pb-3 font-semibold text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap">Activity</button><button onclick="app.switchModalTab('contact')" id="tab-btn-contact" class="tab-inactive pb-3 font-semibold text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap">Contact</button></div>
+                <div class="flex gap-6 overflow-x-auto no-scrollbar"><button onclick="app.switchModalTab('info')" id="tab-btn-info" class="tab-active pb-3 font-semibold text-sm transition-colors whitespace-nowrap">Info</button><button onclick="app.switchModalTab('activity')" id="tab-btn-activity" class="tab-inactive pb-3 font-semibold text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap">Activity</button><button onclick="app.switchModalTab('task')" id="tab-btn-task" class="tab-inactive pb-3 font-semibold text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap">Task</button><button onclick="app.switchModalTab('contact')" id="tab-btn-contact" class="tab-inactive pb-3 font-semibold text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap">Contact</button></div>
             </div>
             <div class="flex-1 overflow-y-auto relative bg-slate-50/50">
                 <div id="view-info" class="p-6">
@@ -419,6 +419,7 @@
                     </form>
                 </div>
                 <div id="view-activity" class="hidden p-6"><div id="activityTimeline" class="space-y-0"></div></div>
+                <div id="view-task" class="hidden p-6"><div id="taskList" class="space-y-3"></div></div>
                 <div id="view-contact" class="hidden p-6 h-full"><div id="contactActions" class="h-full flex flex-col justify-center items-center gap-6"></div></div>
             </div>
             <div id="modalFooter" class="p-4 border-t border-slate-100 shrink-0 md:rounded-b-2xl bg-white pb-8 md:pb-4">
@@ -432,6 +433,16 @@
                              <input type="file" id="activityInputFile" name="noteFile" class="w-full text-sm text-slate-500 bg-slate-50 border border-slate-200 rounded-xl file:mr-4 file:py-3 file:px-4 file:rounded-l-xl file:border-0 file:text-sm file:font-semibold file:bg-slate-200 file:text-slate-700 hover:file:bg-slate-300 hidden">
                         </div>
                         <button type="submit" class="bg-slate-800 text-white rounded-xl w-12 h-[46px] flex items-center justify-center hover:bg-slate-700 active:scale-95 transition shrink-0 shadow-sm"><i class="ph-bold ph-paper-plane-right text-xl"></i></button>
+                    </form>
+                </div>
+                <div id="footer-task" class="hidden">
+                    <form onsubmit="app.handleAddTask(event)" class="flex flex-col gap-2">
+                        <input type="text" id="taskInput" placeholder="Task title..." required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm">
+                        <div class="flex gap-2">
+                            <input type="date" id="taskDueDate" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm">
+                            <select id="taskStatus" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm"><option value="pending">Pending</option><option value="in_progress">In Progress</option><option value="completed">Completed</option></select>
+                            <button type="submit" class="bg-slate-800 text-white rounded-xl px-4 py-3 hover:bg-slate-700 active:scale-95 transition shadow-sm font-medium text-sm"><i class="ph-bold ph-plus"></i> Add</button>
+                        </div>
                     </form>
                 </div>
                 <div id="footer-contact" class="hidden"></div>
@@ -1473,6 +1484,27 @@
                     this.renderTimeline(this.store.state.find(l => l.id === id));
                 }
             }
+
+            handleAddTask(e) {
+                e.preventDefault();
+                const id = document.getElementById('leadIdInput').value;
+                const title = document.getElementById('taskInput').value;
+                const dueDate = document.getElementById('taskDueDate').value;
+                const status = document.getElementById('taskStatus').value;
+                
+                if(id && title) {
+                    const lead = this.store.state.find(l => l.id === id);
+                    if(lead) {
+                        if(!lead.tasks) lead.tasks = [];
+                        lead.tasks.push({ title, dueDate, status, createdAt: new Date().toISOString() });
+                        this.store.save();
+                        document.getElementById('taskInput').value = '';
+                        document.getElementById('taskDueDate').value = '';
+                        document.getElementById('taskStatus').value = 'pending';
+                        this.renderTaskView(lead);
+                    }
+                }
+            }
             moveLead(id, s) { this.store.updateStatus(id, s, this.currentUser); }
             deleteLead(id) { 
                 if(this.currentUser.role==='agent') return alert('Access Denied');
@@ -1617,7 +1649,7 @@
 
             switchModalTab(t) {
                 this.currentModalTab = t;
-                ['info','activity','contact'].forEach(x => {
+                ['info','activity','task','contact'].forEach(x => {
                     document.getElementById(`tab-btn-${x}`).className = x===t ? 'tab-active pb-3 font-semibold text-sm transition-colors whitespace-nowrap' : 'tab-inactive pb-3 font-semibold text-sm transition-colors whitespace-nowrap';
                     document.getElementById(`view-${x}`).classList.toggle('hidden', x!==t);
                     if(document.getElementById(`footer-${x}`)) document.getElementById(`footer-${x}`).classList.toggle('hidden', x!==t);
@@ -1626,6 +1658,7 @@
                 const leadId = document.getElementById('leadIdInput').value;
                 const lead = this.store.state.find(l => l.id === leadId);
                 if (t === 'activity' && lead) this.renderTimeline(lead);
+                if (t === 'task' && lead) this.renderTaskView(lead);
                 if (t === 'contact' && lead) this.renderContactView(lead);
             }
 
@@ -1637,6 +1670,35 @@
                 c.innerHTML = `
                     <a href="tel:+91${cp}" class="w-full bg-green-500 text-white rounded-2xl py-6 flex flex-col items-center justify-center gap-2 shadow-lg active:scale-95 transition"><i class="ph-fill ph-phone text-4xl"></i><span class="text-xl font-bold">Call</span><span class="text-sm opacity-90">${phoneStr}</span></a>
                     <a href="https://wa.me/91${cp}" target="_blank" class="w-full bg-[#25D366] text-white rounded-2xl py-6 flex flex-col items-center justify-center gap-2 shadow-lg active:scale-95 transition"><i class="ph-fill ph-whatsapp-logo text-4xl"></i><span class="text-xl font-bold">WhatsApp</span><span class="text-sm opacity-90">Open Chat</span></a>`;
+            }
+
+            renderTaskView(lead) {
+                const t = document.getElementById('taskList');
+                if(!lead.tasks || lead.tasks.length === 0) {
+                    return t.innerHTML = '<div class="text-center text-slate-400 py-8"><p>No tasks yet</p></div>';
+                }
+                t.innerHTML = lead.tasks.map((task, i) => `
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start justify-between gap-3">
+                        <div class="flex-1 min-w-0">
+                            <p class="font-semibold text-slate-700 break-words">${this.escapeHtml(task.title)}</p>
+                            ${task.description ? `<p class="text-sm text-slate-500 mt-1 break-words">${this.escapeHtml(task.description)}</p>` : ''}
+                            <div class="flex gap-2 items-center mt-2 text-xs text-slate-500">
+                                <span class="px-2 py-1 rounded-full ${task.status === 'completed' ? 'bg-green-100 text-green-700' : task.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}">${task.status || 'pending'}</span>
+                                <span>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-IN') : 'No due date'}</span>
+                            </div>
+                        </div>
+                        <button onclick="app.deleteTask('${lead.id}', ${i})" class="text-slate-400 hover:text-red-500 transition p-1" title="Delete task"><i class="ph ph-trash text-lg"></i></button>
+                    </div>
+                `).join('');
+            }
+
+            deleteTask(leadId, taskIndex) {
+                const lead = this.store.state.find(l => l.id === leadId);
+                if(lead && lead.tasks) {
+                    lead.tasks.splice(taskIndex, 1);
+                    this.store.save();
+                    this.renderTaskView(lead);
+                }
             }
 
             handleTypeChange(s) {
