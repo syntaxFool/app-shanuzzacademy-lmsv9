@@ -9,7 +9,7 @@ function doGet() {
   const logs = readSheet(ss.getSheetByName('Logs'));
   const interests = readSheet(ss.getSheetByName('Interests'));
   
-  // Read Settings Sheet (Col 1 = Location, Col 2 = Source, Col 3 = ScriptURL, Col 4 = AppTitle, Col 5 = TaskTitles)
+  // Read Settings Sheet with dynamic column detection
   const settingsSheet = ss.getSheetByName('Settings');
   const settingsData = settingsSheet ? settingsSheet.getDataRange().getValues() : [];
   let locations = [];
@@ -17,28 +17,46 @@ function doGet() {
   let taskTitles = [];
   let scriptUrl = '';
   let appTitle = '';
+  
   if (settingsData.length > 0) {
     const headers = settingsData[0];
+    const locationsCol = headers.indexOf('Locations');
+    const sourcesCol = headers.indexOf('Sources');
     const scriptUrlCol = headers.indexOf('ScriptURL');
     const appTitleCol = headers.indexOf('AppTitle');
     const taskTitlesCol = headers.indexOf('TaskTitles');
+    
     if (scriptUrlCol !== -1 && settingsData.length > 1) {
       scriptUrl = settingsData[1][scriptUrlCol] || '';
     }
     if (appTitleCol !== -1 && settingsData.length > 1) {
       appTitle = settingsData[1][appTitleCol] || '';
     }
+    
+    // Dynamically parse locations, sources, and task titles by column index
     for (let i = 1; i < settingsData.length; i++) {
-      if (settingsData[i][0]) locations.push(settingsData[i][0]);
-      if (settingsData[i][1]) sources.push(settingsData[i][1]);
+      if (locationsCol !== -1 && settingsData[i][locationsCol]) locations.push(settingsData[i][locationsCol]);
+      if (sourcesCol !== -1 && settingsData[i][sourcesCol]) sources.push(settingsData[i][sourcesCol]);
       if (taskTitlesCol !== -1 && settingsData[i][taskTitlesCol]) taskTitles.push(settingsData[i][taskTitlesCol]);
     }
   }
 
-  // Re-nest activities and tasks
+  // Re-nest activities and tasks using O(N) hash map approach instead of O(N*M)
+  const activitiesMap = {};
+  activities.forEach(a => {
+    if (!activitiesMap[a.leadId]) activitiesMap[a.leadId] = [];
+    activitiesMap[a.leadId].push(a);
+  });
+  
+  const tasksMap = {};
+  tasks.forEach(t => {
+    if (!tasksMap[t.leadId]) tasksMap[t.leadId] = [];
+    tasksMap[t.leadId].push(t);
+  });
+  
   leads.forEach(lead => {
-    lead.activities = activities.filter(a => a.leadId === lead.id).map(a => a);
-    lead.tasks = tasks.filter(t => t.leadId === lead.id).map(t => t);
+    lead.activities = activitiesMap[lead.id] || [];
+    lead.tasks = tasksMap[lead.id] || [];
     lead.value = parseFloat(lead.value) || 0;
   });
 
@@ -55,6 +73,15 @@ function doGet() {
 function doPost(e) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   setupSheets(ss);
+  
+  // Use LockService to prevent race conditions during concurrent writes
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) {
+    return ContentService.createTextOutput(JSON.stringify({ 
+      status: 'error', 
+      message: 'Server busy. Please try again.' 
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
   
   try {
     const data = JSON.parse(e.postData.contents);
@@ -123,6 +150,8 @@ function doPost(e) {
     }
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: error.toString() })).setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
   }
 }
 
