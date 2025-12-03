@@ -158,9 +158,24 @@
             </div>
             <div id="tableView" class="h-full w-full hidden overflow-auto bg-white">
                 <div class="min-w-[800px] p-6">
+                    <!-- Bulk Actions Bar -->
+                    <div id="bulkActionsBar" class="hidden mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <i class="ph-bold ph-check-circle text-blue-600"></i>
+                            <span id="selectedCount" class="font-semibold text-blue-700">0 selected</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <select id="bulkAssignSelect" class="bg-white border border-blue-300 rounded px-3 py-2 text-sm">
+                                <option value="">Select agent to assign...</option>
+                            </select>
+                            <button onclick="app.bulkAssignLeads()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-semibold">Assign Selected</button>
+                            <button onclick="app.clearSelection()" class="bg-slate-300 hover:bg-slate-400 text-slate-700 px-4 py-2 rounded text-sm font-semibold">Clear</button>
+                        </div>
+                    </div>
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
+                                <th class="pb-3 font-bold pl-4"><input type="checkbox" id="selectAllCheckbox" onchange="app.toggleSelectAll(this.checked)" class="w-4 h-4 rounded"></th>
                                 <th class="pb-3 font-bold pl-4">Name</th>
                                 <th class="pb-3 font-bold">Contact</th>
                                 <th class="pb-3 font-bold">Status</th>
@@ -187,10 +202,6 @@
                             </tr>
                         </thead>
                         <tbody id="agentTableBody" class="text-sm text-slate-700 divide-y divide-slate-100"></tbody>
-                    </table>
-                </div>
-            </div>
-                        <tbody id="tableBody" class="text-sm text-slate-700 divide-y divide-slate-100"></tbody>
                     </table>
                 </div>
             </div>
@@ -630,8 +641,24 @@
                                                     if (this.currentUser && (this.currentUser.role === 'agent' || this.currentUser.role === 'user')) {
                                                         filteredLeads = leads.filter(lead => lead.assignedTo === this.currentUser.username || lead.assignedTo === this.currentUser.id);
                                                     }
+                                                    // Populate bulk assign dropdown if admin/superuser
+                                                    if (this.currentUser && (this.currentUser.role === 'admin' || this.currentUser.role === 'superuser')) {
+                                                        const assignSelect = document.getElementById('bulkAssignSelect');
+                                                        if (assignSelect) {
+                                                            const currentVal = assignSelect.value;
+                                                            assignSelect.innerHTML = '<option value="">Select agent to assign...</option>';
+                                                            this.store.users.filter(u => u.role === 'admin' || u.role === 'agent').forEach(u => {
+                                                                const opt = document.createElement('option');
+                                                                opt.value = u.username || u.id;
+                                                                opt.textContent = u.name;
+                                                                assignSelect.appendChild(opt);
+                                                            });
+                                                            assignSelect.value = currentVal;
+                                                        }
+                                                    }
                                                     tbody.innerHTML = filteredLeads.map(lead => `
                                                         <tr class="table-row-hover">
+                                                            <td class="pl-4 py-2"><input type="checkbox" class="leadCheckbox w-4 h-4 rounded" data-leadId="${lead.id}" onchange="app.updateBulkActionsBar()"></td>
                                                             <td class="pl-4 py-2 font-bold">${this.escapeHtml(lead.name)}</td>
                                                             <td class="py-2">${this.escapeHtml(lead.phone || '')}<br><span class="text-xs text-slate-400">${this.escapeHtml(lead.email || '')}</span></td>
                                                             <td class="py-2">${this.escapeHtml(lead.status)}</td>
@@ -644,6 +671,8 @@
                                                             </td>
                                                         </tr>
                                                     `).join('');
+                                                    // Reset bulk actions bar
+                                                    this.updateBulkActionsBar();
                                                 }
                                     // Switch between Kanban and Table views
                                     switchViewMode(mode) {
@@ -700,6 +729,95 @@
                                                 <td class="py-2">${assignedLeads.length > 0 ? assignedLeads.map(l => `<span class="inline-block bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs mr-1">${this.escapeHtml(l.name)}</span>`).join('') : '<span class="text-slate-400 italic">None</span>'}</td>
                                             </tr>`;
                                         }).join('');
+                                    }
+
+                                    // Bulk selection methods
+                                    updateBulkActionsBar() {
+                                        const checkboxes = document.querySelectorAll('.leadCheckbox:checked');
+                                        const selectedCount = checkboxes.length;
+                                        const bulkActionsBar = document.getElementById('bulkActionsBar');
+                                        const selectedCountEl = document.getElementById('selectedCount');
+                                        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+                                        
+                                        if (selectedCount > 0) {
+                                            bulkActionsBar.classList.remove('hidden');
+                                            selectedCountEl.textContent = `${selectedCount} selected`;
+                                        } else {
+                                            bulkActionsBar.classList.add('hidden');
+                                            if (selectAllCheckbox) selectAllCheckbox.checked = false;
+                                        }
+                                    }
+
+                                    toggleSelectAll(checked) {
+                                        const checkboxes = document.querySelectorAll('.leadCheckbox');
+                                        checkboxes.forEach(cb => cb.checked = checked);
+                                        this.updateBulkActionsBar();
+                                    }
+
+                                    clearSelection() {
+                                        const checkboxes = document.querySelectorAll('.leadCheckbox');
+                                        checkboxes.forEach(cb => cb.checked = false);
+                                        document.getElementById('selectAllCheckbox').checked = false;
+                                        this.updateBulkActionsBar();
+                                    }
+
+                                    bulkAssignLeads() {
+                                        const assignSelect = document.getElementById('bulkAssignSelect');
+                                        const assignTo = assignSelect.value;
+                                        if (!assignTo) {
+                                            alert('Please select an agent to assign leads to');
+                                            return;
+                                        }
+                                        
+                                        const checkboxes = document.querySelectorAll('.leadCheckbox:checked');
+                                        const leadIds = Array.from(checkboxes).map(cb => cb.getAttribute('data-leadid'));
+                                        
+                                        console.log('Bulk Assign - Selected Lead IDs:', leadIds);
+                                        console.log('Bulk Assign - Assigning to:', assignTo);
+                                        console.log('Bulk Assign - Current store state:', this.store.state);
+                                        
+                                        if (leadIds.length === 0) {
+                                            alert('Please select at least one lead');
+                                            return;
+                                        }
+                                        
+                                        if (!confirm(`Assign ${leadIds.length} lead(s) to the selected agent?`)) {
+                                            return;
+                                        }
+                                        
+                                        // Update all selected leads
+                                        let updateCount = 0;
+                                        leadIds.forEach(leadId => {
+                                            const lead = this.store.state.find(l => l.id === leadId);
+                                            console.log(`Looking for lead with id "${leadId}":`, lead);
+                                            if (lead) {
+                                                console.log(`Updating lead "${lead.name}" from "${lead.assignedTo}" to "${assignTo}"`);
+                                                lead.assignedTo = assignTo;
+                                                updateCount++;
+                                                // Add activity log
+                                                if (!lead.activities) lead.activities = [];
+                                                lead.activities.push({
+                                                    type: 'Assigned',
+                                                    note: `Bulk assigned to ${assignTo}`,
+                                                    createdBy: this.currentUser.name,
+                                                    role: this.currentUser.role,
+                                                    timestamp: new Date().toISOString()
+                                                });
+                                            }
+                                        });
+                                        
+                                        console.log(`Updated ${updateCount} leads out of ${leadIds.length}`);
+                                        
+                                        // Save locally and push to cloud
+                                        this.store.saveLocal();
+                                        this.store.pushToCloud();
+                                        
+                                        console.log('After push, store state:', this.store.state);
+                                        
+                                        // Clear selection and show success
+                                        this.clearSelection();
+                                        this.showNotification(`Successfully assigned ${leadIds.length} lead(s)`);
+                                        this.render(this.store.state);
                                     }
                         // Render the activity timeline for a lead in the modal
                         renderTimeline(lead) {
