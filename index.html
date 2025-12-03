@@ -1497,7 +1497,7 @@
                     const lead = this.store.state.find(l => l.id === id);
                     if(lead) {
                         if(!lead.tasks) lead.tasks = [];
-                        lead.tasks.push({ title, dueDate, status: 'pending', createdAt: new Date().toISOString() });
+                        lead.tasks.push({ id: this.store.generateId(), title, dueDate, status: 'pending', createdAt: new Date().toISOString() });
                         // Add activity log for task creation
                         this.store.addActivity(id, { type: 'task', note: `Task created: Pending: ${title}${dueDate ? ' (Due: ' + new Date(dueDate).toLocaleDateString('en-IN') + ')' : ''}` }, this.currentUser);
                         // Add follow-up activity if due date exists
@@ -1745,6 +1745,7 @@
                     
                     this.store.save();
                     this.renderTaskView(lead);
+                    this.renderTimeline(lead);
                     this.closeTaskDetail();
                 }
             }

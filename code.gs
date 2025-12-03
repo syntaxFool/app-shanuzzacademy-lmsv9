@@ -4,6 +4,7 @@ function doGet() {
   
   const leads = readSheet(ss.getSheetByName('Leads'));
   const activities = readSheet(ss.getSheetByName('Activities'));
+  const tasks = readSheet(ss.getSheetByName('Tasks'));
   const users = readSheet(ss.getSheetByName('Users'));
   const logs = readSheet(ss.getSheetByName('Logs'));
   const interests = readSheet(ss.getSheetByName('Interests'));
@@ -31,9 +32,10 @@ function doGet() {
     }
   }
 
-  // Re-nest activities
+  // Re-nest activities and tasks
   leads.forEach(lead => {
     lead.activities = activities.filter(a => a.leadId === lead.id).map(a => a);
+    lead.tasks = tasks.filter(t => t.leadId === lead.id).map(t => t);
     lead.value = parseFloat(lead.value) || 0;
   });
 
@@ -60,19 +62,24 @@ function doPost(e) {
       
       if(data.leads) {
         const flatLeads = data.leads.map(l => {
-          const { activities, ...rest } = l; 
+          const { activities, tasks, ...rest } = l; 
           return rest;
         });
         
         const flatActivities = [];
+        const flatTasks = [];
         data.leads.forEach(l => {
           if (l.activities && Array.isArray(l.activities)) {
             l.activities.forEach(a => flatActivities.push({ ...a, leadId: l.id }));
+          }
+          if (l.tasks && Array.isArray(l.tasks)) {
+            l.tasks.forEach(t => flatTasks.push({ ...t, leadId: l.id }));
           }
         });
 
         writeSheet(ss.getSheetByName('Leads'), flatLeads, ['id', 'name', 'phone', 'email', 'status', 'value', 'interest', 'location', 'source', 'assignedTo', 'notes', 'createdAt']);
         writeSheet(ss.getSheetByName('Activities'), flatActivities, ['id', 'leadId', 'type', 'note', 'timestamp', 'createdBy', 'role']);
+        writeSheet(ss.getSheetByName('Tasks'), flatTasks, ['id', 'leadId', 'title', 'status', 'dueDate', 'note', 'createdAt', 'completedAt']);
       }
       
       return ContentService.createTextOutput(JSON.stringify({ status: 'success' })).setMimeType(ContentService.MimeType.JSON);
@@ -118,7 +125,7 @@ function doPost(e) {
 
 // --- Helpers ---
 function setupSheets(ss) {
-  const sheets = ['Leads', 'Activities', 'Users', 'Logs', 'Interests', 'Settings'];
+  const sheets = ['Leads', 'Activities', 'Tasks', 'Users', 'Logs', 'Interests', 'Settings'];
   sheets.forEach(name => {
     if (!ss.getSheetByName(name)) ss.insertSheet(name);
   });
