@@ -1191,8 +1191,13 @@
                     if (matches.length > 0) {
                         suggestions.innerHTML = matches.map(m => {
                             const text = typeof m === 'string' ? m : m.name;
+                            const isState = text.startsWith('State - ') || text.startsWith('Union Territory - ');
+                            const isCity = text.startsWith('Cities - ');
+                            const displayText = text.replace(/^(State - |Union Territory - |Cities - )/, '');
                             const subtext = typeof m === 'string' ? '' : `₹${m.value.toLocaleString('en-IN')}`;
-                            return `<div class="suggestion-item" data-val="${text}">${text} <span class="text-xs text-slate-400 float-right">${subtext}</span></div>`;
+                            const indent = isCity ? 'pl-6' : '';
+                            const badge = isState ? '<span class="text-xs bg-primary text-white px-2 py-0.5 rounded ml-2">State</span>' : isCity ? '<span class="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded ml-2">City</span>' : '';
+                            return `<div class="suggestion-item ${indent} py-2 cursor-pointer hover:bg-slate-100" data-val="${text}">${displayText} ${badge} <span class="text-xs text-slate-400 float-right">${subtext}</span></div>`;
                         }).join('');
                         suggestions.classList.remove('hidden');
                         
@@ -1200,7 +1205,9 @@
                         items.forEach((item, index) => {
                             item.addEventListener('click', () => {
                                 const selected = matches[index];
-                                onSelect(selected);
+                                const text = typeof selected === 'string' ? selected : selected.name;
+                                const cleanText = text.replace(/^(State - |Union Territory - |Cities - )/, '');
+                                onSelect(cleanText);
                                 suggestions.classList.add('hidden');
                             });
                         });
