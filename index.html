@@ -123,14 +123,36 @@
 
     <!-- MAIN APP CONTENT -->
     <div id="appContent" class="hidden h-full flex-col">
-                <!-- NOTIFICATION BOX -->
-                <div id="notificationBox" class="fixed top-16 left-1/2 -translate-x-1/2 z-[101] w-80 max-w-full bg-white border border-slate-200 rounded-xl shadow-xl p-4 hidden">
-                    <div class="flex justify-between items-center mb-2">
-                        <h4 class="font-bold text-slate-800 text-base flex items-center gap-2"><i class="ph-bold ph-bell text-green-600"></i> Notifications</h4>
-                        <button onclick="ui.toggleNotificationBox()" class="text-slate-400 hover:text-slate-600"><i class="ph-bold ph-x"></i></button>
+                <!-- NOTIFICATION CENTER DROPDOWN -->
+                <div id="notificationBox" class="fixed top-16 right-4 z-[101] w-96 max-w-[calc(100vw-2rem)] bg-white border border-slate-200 rounded-2xl shadow-2xl hidden flex flex-col max-h-[500px]">
+                    <!-- Header -->
+                    <div class="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-slate-0 shrink-0">
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i class="ph-bold ph-bell-ringing text-green-600"></i> 
+                            Notification Center
+                        </h3>
+                        <button onclick="ui.toggleNotificationBox()" class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg p-1 transition">
+                            <i class="ph-bold ph-x text-xl"></i>
+                        </button>
                     </div>
-                    <div id="notificationList" class="space-y-3 max-h-64 overflow-y-auto"></div>
-                    <div id="notificationEmpty" class="text-slate-400 text-sm text-center py-6">No notifications</div>
+                    
+                    <!-- Notifications List -->
+                    <div id="notificationList" class="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
+                        <div id="notificationEmpty" class="text-slate-400 text-sm text-center py-12 flex flex-col items-center gap-2">
+                            <i class="ph-bold ph-bell-slash text-3xl opacity-30"></i>
+                            <span>No notifications yet</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Footer -->
+                    <div class="px-6 py-3 border-t border-slate-100 bg-slate-50 flex items-center gap-2 shrink-0">
+                        <button onclick="app.clearAllNotifications()" class="flex-1 text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200 py-2 px-3 rounded-lg transition">
+                            Clear All
+                        </button>
+                        <button onclick="app.loadNotifications(); ui.updateNotificationBadge()" class="flex-1 text-sm font-semibold text-primary hover:bg-primary/10 py-2 px-3 rounded-lg transition">
+                            Refresh
+                        </button>
+                    </div>
                 </div>
         <header class="bg-white border-b border-slate-200 px-4 py-3 flex justify-between items-center shadow-sm z-20 shrink-0">
             <div class="flex items-center gap-3">
@@ -708,11 +730,19 @@
         }
 
         class App {
-                                                                                                                        addNotification(msg) {
+                                                                                                                        addNotification(msg, type = 'info') {
                                                                                                                             if (!this._notifications) this._notifications = [];
-                                                                                                                            this._notifications.unshift({ msg, ts: new Date().toLocaleString() });
+                                                                                                                            const timestamp = new Date();
+                                                                                                                            this._notifications.unshift({ 
+                                                                                                                                msg, 
+                                                                                                                                type,
+                                                                                                                                ts: timestamp.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'}),
+                                                                                                                                fullTs: timestamp.toLocaleString()
+                                                                                                                            });
                                                                                                                             if (this._notifications.length > 20) this._notifications.pop();
                                                                                                                             this.renderNotificationBox();
+                                                                                                                            this.saveNotifications();
+                                                                                                                            if (ui && ui.updateNotificationBadge) ui.updateNotificationBadge();
                                                                                                                         }
 
                                                                                                                         renderNotificationBox() {
@@ -725,25 +755,107 @@
                                                                                                                                 count.style.display = 'none';
                                                                                                                                 return;
                                                                                                                             }
-                                                                                                                            list.innerHTML = this._notifications.map(n => `<div class=\"bg-green-50 border border-green-100 rounded-lg px-3 py-2 flex items-center gap-2\"><i class=\"ph-bold ph-bell text-green-600\"></i><div><div class=\"font-semibold text-slate-700 text-sm\">${n.msg}</div><div class=\"text-xs text-slate-400\">${n.ts}</div></div></div>`).join('');
+                                                                                                                            
+                                                                                                                            const typeConfig = {
+                                                                                                                                success: { bg: 'bg-green-50', border: 'border-green-100', icon: 'ph-check-circle', text: 'text-green-700', badge: 'bg-green-100' },
+                                                                                                                                error: { bg: 'bg-red-50', border: 'border-red-100', icon: 'ph-warning-circle', text: 'text-red-700', badge: 'bg-red-100' },
+                                                                                                                                warning: { bg: 'bg-amber-50', border: 'border-amber-100', icon: 'ph-warning', text: 'text-amber-700', badge: 'bg-amber-100' },
+                                                                                                                                info: { bg: 'bg-blue-50', border: 'border-blue-100', icon: 'ph-info', text: 'text-blue-700', badge: 'bg-blue-100' }
+                                                                                                                            };
+                                                                                                                            
+                                                                                                                            list.innerHTML = this._notifications.map((n, idx) => {
+                                                                                                                                const cfg = typeConfig[n.type] || typeConfig.info;
+                                                                                                                                return `<div class="${cfg.bg} border ${cfg.border} rounded-xl px-4 py-3 flex items-start gap-3 hover:shadow-md transition group cursor-pointer" title="${n.fullTs}">
+                                                                                                                                    <i class="ph-bold ${cfg.icon} ${cfg.text} text-lg mt-0.5 flex-shrink-0"></i>
+                                                                                                                                    <div class="flex-1 min-w-0">
+                                                                                                                                        <div class="font-semibold text-slate-700 text-sm line-clamp-2">${n.msg}</div>
+                                                                                                                                        <div class="text-xs ${cfg.text} opacity-70 mt-1">${n.ts}</div>
+                                                                                                                                    </div>
+                                                                                                                                    <button onclick="app._notifications.splice(${idx}, 1); app.renderNotificationBox(); app.saveNotifications()" class="text-slate-300 hover:text-slate-600 opacity-0 group-hover:opacity-100 transition flex-shrink-0">
+                                                                                                                                        <i class="ph-bold ph-x text-lg"></i>
+                                                                                                                                    </button>
+                                                                                                                                </div>`;
+                                                                                                                            }).join('');
                                                                                                                             empty.style.display = 'none';
                                                                                                                             count.textContent = this._notifications.length;
                                                                                                                             count.style.display = '';
                                                                                                                         }
+                                                                                                                        
+                                                                                                                        clearAllNotifications() {
+                                                                                                                            this._notifications = [];
+                                                                                                                            this.renderNotificationBox();
+                                                                                                                            this.saveNotifications();
+                                                                                                                            this.notify('All notifications cleared', 'success');
+                                                                                                                        }
+                                                                                                                        
+                                                                                                                        saveNotifications() {
+                                                                                                                            try {
+                                                                                                                                localStorage.setItem('app_notifications', JSON.stringify(this._notifications || []));
+                                                                                                                            } catch(e) {
+                                                                                                                                console.warn('Failed to save notifications:', e);
+                                                                                                                            }
+                                                                                                                        }
+                                                                                                                        
+                                                                                                                        loadNotifications() {
+                                                                                                                            try {
+                                                                                                                                const saved = localStorage.getItem('app_notifications');
+                                                                                                                                this._notifications = saved ? JSON.parse(saved) : [];
+                                                                                                                                this.renderNotificationBox();
+                                                                                                                            } catch(e) {
+                                                                                                                                console.warn('Failed to load notifications:', e);
+                                                                                                                                this._notifications = [];
+                                                                                                                            }
+                                                                                                                        }
                                                                                                             startAutoSync() {
+                                                                                                                // Load persisted notifications from localStorage
+                                                                                                                this.loadNotifications();
+                                                                                                                ui.updateNotificationBadge();
                                                                                                                 // Store last assigned lead IDs for notification
                                                                                                                 this._lastAssignedLeadIds = new Set();
                                                                                                                 // Initial population
                                                                                                                 this.updateAssignedLeadIds();
+                                                                                                                // Check for upcoming task reminders every minute
+                                                                                                                this.checkUpcomingTasks();
                                                                                                                 setInterval(() => {
                                                                                                                     this.autoSyncWithNotification();
                                                                                                                 }, 2400000); // Sync every 40 minutes
+                                                                                                                setInterval(() => {
+                                                                                                                    this.checkUpcomingTasks();
+                                                                                                                }, 60000); // Check tasks every minute
                                                                                                             }
 
                                                                                                             updateAssignedLeadIds() {
                                                                                                                 if (!this.currentUser || !(this.currentUser.role === 'agent' || this.currentUser.role === 'user')) return;
                                                                                                                 const assignedLeads = this.store.state.filter(lead => lead.assignedTo === this.currentUser.username || lead.assignedTo === this.currentUser.id);
                                                                                                                 this._lastAssignedLeadIds = new Set(assignedLeads.map(l => l.id));
+                                                                                                            }
+
+                                                                                                            checkUpcomingTasks() {
+                                                                                                                if (!this.currentUser || !(this.currentUser.role === 'agent' || this.currentUser.role === 'user')) return;
+                                                                                                                const now = new Date();
+                                                                                                                const fifteenMinutesFromNow = new Date(now.getTime() + 15 * 60000);
+                                                                                                                const today = now.toISOString().split('T')[0];
+                                                                                                                const reminderKey = `task_reminder_${today}`;
+                                                                                                                const remindedTasks = JSON.parse(sessionStorage.getItem(reminderKey) || '[]');
+                                                                                                                const assignedLeads = this.store.state.filter(lead => lead.assignedTo === this.currentUser.username || lead.assignedTo === this.currentUser.id);
+                                                                                                                
+                                                                                                                assignedLeads.forEach(lead => {
+                                                                                                                    if (!lead.tasks || lead.tasks.length === 0) return;
+                                                                                                                    lead.tasks.forEach((task, idx) => {
+                                                                                                                        if (task.status !== 'pending' || !task.dueDate) return;
+                                                                                                                        const taskId = `${lead.id}_${idx}`;
+                                                                                                                        if (remindedTasks.includes(taskId)) return; // Already reminded today
+                                                                                                                        
+                                                                                                                        const dueDate = new Date(task.dueDate + 'T23:59:59');
+                                                                                                                        if (dueDate <= fifteenMinutesFromNow && dueDate > now) {
+                                                                                                                            const minutesLeft = Math.round((dueDate - now) / 60000);
+                                                                                                                            this.notify(`Task reminder: "${task.title}" for ${lead.name} due in ${minutesLeft} min`, 'warning');
+                                                                                                                            remindedTasks.push(taskId);
+                                                                                                                        }
+                                                                                                                    });
+                                                                                                                });
+                                                                                                                
+                                                                                                                sessionStorage.setItem(reminderKey, JSON.stringify(remindedTasks));
                                                                                                             }
 
                                                                                                             async autoSyncWithNotification() {
@@ -768,6 +880,41 @@
                                                                                                         tray.classList.remove('opacity-100');
                                                                                                     }, 5000);
                                                                                                     this.addNotification(msg);
+                                                                                                }
+
+                                                                                                notify(msg, type = 'info') {
+                                                                                                    const tray = document.getElementById('notificationTray');
+                                                                                                    if (!tray) return;
+                                                                                                    
+                                                                                                    // Color mapping
+                                                                                                    const colors = {
+                                                                                                        success: 'bg-green-500',
+                                                                                                        error: 'bg-red-500',
+                                                                                                        warning: 'bg-amber-500',
+                                                                                                        info: 'bg-blue-500'
+                                                                                                    };
+                                                                                                    
+                                                                                                    // Icon mapping
+                                                                                                    const icons = {
+                                                                                                        success: 'ph-check-circle',
+                                                                                                        error: 'ph-warning-circle',
+                                                                                                        warning: 'ph-warning',
+                                                                                                        info: 'ph-info'
+                                                                                                    };
+                                                                                                    
+                                                                                                    const bgColor = colors[type] || colors.info;
+                                                                                                    const icon = icons[type] || icons.info;
+                                                                                                    
+                                                                                                    // Update tray appearance
+                                                                                                    tray.className = `fixed top-3 left-1/2 -translate-x-1/2 z-[100] ${bgColor} text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 text-sm font-semibold transition-all duration-300 opacity-100`;
+                                                                                                    document.getElementById('notificationMessage').innerHTML = `<i class="ph-bold ${icon}"></i> ${msg}`;
+                                                                                                    
+                                                                                                    if (this._notifTimeout) clearTimeout(this._notifTimeout);
+                                                                                                    this._notifTimeout = setTimeout(() => {
+                                                                                                        tray.classList.add('opacity-0', 'pointer-events-none');
+                                                                                                    }, 4000);
+                                                                                                    
+                                                                                                    this.addNotification(msg, type);
                                                                                                 }
 
                                                                                                 // Show notification if a new lead is assigned to the current user
@@ -1140,7 +1287,7 @@
                                         const assignSelect = document.getElementById('bulkAssignSelect');
                                         const assignTo = assignSelect.value;
                                         if (!assignTo) {
-                                            alert('Please select an agent to assign leads to');
+                                            this.notify('Please select an agent to assign leads to', 'error');
                                             return;
                                         }
                                         
@@ -1152,7 +1299,7 @@
                                         console.log('Bulk Assign - Current store state:', this.store.state);
                                         
                                         if (leadIds.length === 0) {
-                                            alert('Please select at least one lead');
+                                            this.notify('Please select at least one lead', 'error');
                                             return;
                                         }
                                         
@@ -1528,34 +1675,33 @@
                 // ID: 3 CAPS letters + 3 digits, max 6 characters
                 const idRegex = /^[A-Z]{3}\d{3}$/;
                 if (!idRegex.test(username)) {
-                    return alert('ID must be exactly 3 UPPERCASE letters followed by 3 digits (e.g., ABC123)');
+                    return this.notify('ID must be exactly 3 UPPERCASE letters followed by 3 digits (e.g., ABC123)', 'error');
                 }
                 
                 // Password: 4 digits only
                 if (!/^\d{4}$/.test(password)) {
-                    return alert('Password must be exactly 4 digits');
+                    return this.notify('Password must be exactly 4 digits', 'error');
                 }
                 
                 // Name: UPPERCASE only, max 15 characters
                 if (name !== name.toUpperCase()) {
-                    return alert('Name must be in UPPERCASE letters only');
+                    return this.notify('Name must be in UPPERCASE letters only', 'error');
                 }
                 if (name.length > 15) {
-                    return alert('Name must be maximum 15 characters');
+                    return this.notify('Name must be maximum 15 characters', 'error');
                 }
                 
                 // Check role limits
                 const counts = this.store.getCounts();
-                if (role === 'admin' && counts.admins >= 5) return alert('Max 5 Admins');
-                if (role === 'agent' && counts.agents >= 10) return alert('Max 10 Agents');
-                
+                if (role === 'admin' && counts.admins >= 5) return this.notify('Max 5 Admins', 'warning');
+                if (role === 'agent' && counts.agents >= 10) return this.notify('Max 10 Agents', 'warning');
                 this.store.addUser({ username: username, password: password, name: name, role: role });
                 e.target.reset(); 
                 this.renderUserList();
                 this.populateAssignedToDropdown();
                 if(window.app && typeof window.app.renderLeaderboard==='function'){window.app.renderLeaderboard();}
             }
-            deleteUser(id) { if(confirm('Remove user?')) { if(!this.store.deleteUser(id)) alert('Cannot delete Superuser'); this.renderUserList(); } }
+            deleteUser(id) { if(confirm('Remove user?')) { if(!this.store.deleteUser(id)) this.notify('Cannot delete Superuser', 'error'); this.renderUserList(); } }
             renderUserList() {
                 const c = document.getElementById('userListContainer');
                 const counts = this.store.getCounts();
@@ -1567,7 +1713,7 @@
                 await this.store.saveConfig({ appTitle: e.target.appTitle.value, dbUrl: e.target.dbUrl.value });
                 this.applyConfig();
                 if(window.app && typeof window.app.renderLeaderboard==='function'){window.app.renderLeaderboard();}
-                alert('Saved & Synced');
+                this.notify('Saved & Synced', 'success');
             }
 
             checkDuplicatePhone(phoneNumber) {
@@ -1650,7 +1796,7 @@
                     // Check for duplicate phone number before adding new lead
                     const duplicateLead = this.checkDuplicatePhone(fullPhone);
                     if (duplicateLead) {
-                        alert(`⚠️ Duplicate Lead\n\nLead already exists:\n📛 ${duplicateLead.name}\n📞 ${duplicateLead.phone}\n📊 Status: ${duplicateLead.status}`);
+                        this.notify(`Duplicate Lead: ${duplicateLead.name} (${duplicateLead.phone})`, 'warning');
                         return;
                     }
                     this.store.add(d, this.currentUser);
@@ -1694,7 +1840,7 @@
             confirmLostReason() {
                 const selectedReason = document.querySelector('input[name="lostReason"]:checked')?.value;
                 if (!selectedReason) {
-                    alert('Please select a reason for the loss');
+                    this.notify('Please select a reason for the loss', 'error');
                     return;
                 }
 
@@ -1703,7 +1849,7 @@
                 if (selectedReason === 'Other') {
                     const customReason = document.getElementById('customReasonInput').value.trim();
                     if (!customReason) {
-                        alert('Please specify the reason for the loss');
+                        this.notify('Please specify the reason for the loss', 'error');
                         document.getElementById('customReasonInput').focus();
                         return;
                     }
@@ -1809,7 +1955,7 @@
                 this.store.updateStatus(id, s, this.currentUser); 
             }
             deleteLead(id) { 
-                if(this.currentUser.role==='agent') return alert('Access Denied');
+                if(this.currentUser.role==='agent') return this.notify('Access Denied', 'error');
                 if(confirm('Delete?')) this.store.delete(id, this.currentUser); 
             }
             editLead(id, tab) {
@@ -2228,7 +2374,7 @@
                 
                 // Make note mandatory for completed/dropped tasks
                 if(!note) {
-                    alert('Please add a note before completing or dropping the task');
+                    this.notify('Please add a note before completing or dropping the task', 'error');
                     return;
                 }
                 
@@ -2293,7 +2439,21 @@
         const ui = {
                                     toggleNotificationBox: () => {
                                         const box = document.getElementById('notificationBox');
-                                        if (box) box.classList.toggle('hidden');
+                                        if (box) {
+                                            box.classList.toggle('hidden');
+                                            if (!box.classList.contains('hidden')) {
+                                                app.loadNotifications();
+                                            }
+                                        }
+                                    },
+                                    updateNotificationBadge: () => {
+                                        const count = document.getElementById('notificationCount');
+                                        if (app._notifications && app._notifications.length > 0) {
+                                            count.textContent = app._notifications.length;
+                                            count.style.display = '';
+                                        } else {
+                                            count.style.display = 'none';
+                                        }
                                     },
                         hideNotification: () => {
                             const tray = document.getElementById('notificationTray');
