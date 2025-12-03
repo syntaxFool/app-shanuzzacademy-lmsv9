@@ -134,6 +134,19 @@
                     <span id="notificationCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold" style="display:none;">0</span>
                 </button>
                 <button onclick="app.sync()" class="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition" title="Force Sync"><i class="ph-bold ph-arrows-clockwise text-xl"></i></button>
+                <div class="relative">
+                    <button id="adminSysBtn" onclick="ui.toggleAdminMenu()" class="p-2 text-slate-600 hover:bg-slate-100 rounded-full transition hidden" title="Admin System">
+                        <i class="ph-bold ph-gear text-xl"></i>
+                    </button>
+                    <div id="adminMenuDropdown" class="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-lg hidden z-50">
+                        <button onclick="ui.toggleLogs(true); ui.toggleAdminMenu()" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 border-b border-slate-100">
+                            <i class="ph-bold ph-scroll"></i> Session Logs
+                        </button>
+                        <button onclick="ui.toggleConfig(true); ui.toggleAdminMenu()" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                            <i class="ph-bold ph-user-gear"></i> SYS Config
+                        </button>
+                    </div>
+                </div>
             </div>
                 <!-- NOTIFICATION BOX -->
                 <div id="notificationBox" class="fixed top-16 left-1/2 -translate-x-1/2 z-[101] w-80 max-w-full bg-white border border-slate-200 rounded-xl shadow-xl p-4 hidden">
@@ -309,7 +322,7 @@
             </button>
             <div class="md:hidden w-full flex justify-center pt-3 pb-1" onclick="ui.toggleConfig(false)"><div class="w-12 h-1.5 bg-slate-200 rounded-full"></div></div>
             <div class="px-6 py-4 border-b border-slate-100 shrink-0 flex justify-between items-center">
-                <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="ph-bold ph-user-gear text-primary"></i> User Config</h3>
+                <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="ph-bold ph-user-gear text-primary"></i> SYS Config</h3>
                 <!-- Desktop Exit Button (only) -->
                 <button onclick="ui.toggleConfig(false)" class="hidden md:block p-1 text-slate-400 hover:text-slate-600 bg-slate-100 rounded-full"><i class="ph-bold ph-x text-lg"></i></button>
             </div>
@@ -680,8 +693,11 @@
                                                     const tbody = document.getElementById('tableBody');
                                                     if (!tbody) return;
                                                     
-                                                    // Debug: log available users
+                                                    // Debug: log available users and sample leads
                                                     console.log('Available users in store:', this.store.users);
+                                                    if (leads.length > 0) {
+                                                        console.log('Sample lead assignedTo values:', leads.slice(0, 3).map(l => ({ name: l.name, assignedTo: l.assignedTo })));
+                                                    }
                                                     
                                                     // Filter for agent/user: only show assigned leads
                                                     let filteredLeads = leads;
@@ -1279,11 +1295,12 @@
                 this.initSettingsAutocomplete();
                 this.populateAssignedToDropdown();
 
+                // Show admin settings for superuser/admin
                 if (this.currentUser.role === 'superuser' || this.currentUser.role === 'admin') {
-                    const btnUserConfig = document.getElementById('btnUserConfig');
-                    if (btnUserConfig) {
-                        btnUserConfig.classList.remove('hidden');
-                        btnUserConfig.classList.add('flex');
+                    // Show Admin SYS button in header
+                    const adminBtn = document.getElementById('adminSysBtn');
+                    if (adminBtn) {
+                        adminBtn.classList.remove('hidden');
                     }
                 }
 
@@ -1624,6 +1641,7 @@
                 } 
             },
             toggleMenu: (s) => { const m = document.getElementById('sideMenu'); if(s) { try { window.app.renderFollowUps(); } catch(e){} m.classList.remove('hidden'); requestAnimationFrame(()=>m.classList.add('open')); } else { m.classList.remove('open'); setTimeout(()=>m.classList.add('hidden'),300); } },
+            toggleAdminMenu: () => { const menu = document.getElementById('adminMenuDropdown'); if(menu) menu.classList.toggle('hidden'); },
             toggleLogs: (s) => { const m = document.getElementById('logsModal'); if(s) { try { window.app.renderLogs(); } catch(e){} m.classList.remove('hidden'); requestAnimationFrame(()=>m.classList.add('open')); } else { m.classList.remove('open'); setTimeout(()=>m.classList.add('hidden'),300); } },
             toggleConfig: (s) => { const m = document.getElementById('configModal'); if(s) { try { window.app.renderUserList(); } catch(e){} m.classList.remove('hidden'); requestAnimationFrame(()=>m.classList.add('open')); } else { m.classList.remove('open'); setTimeout(()=>m.classList.add('hidden'),300); } },
             showLoading: (s) => { const l = document.getElementById('loadingOverlay'); if(s) l.classList.remove('hidden'); else l.classList.add('hidden'); }
@@ -1631,6 +1649,16 @@
 
         // Explictly attach to window
         window.app = new App();
+        
+        // Close admin menu when clicking outside
+        document.addEventListener('click', (e) => {
+            const adminBtn = document.getElementById('adminSysBtn');
+            const adminMenu = document.getElementById('adminMenuDropdown');
+            if (adminBtn && adminMenu && e.target !== adminBtn && !adminBtn.contains(e.target) && !adminMenu.contains(e.target)) {
+                adminMenu.classList.add('hidden');
+            }
+        });
+        
         // Always update login card/app title on page load
         document.addEventListener('DOMContentLoaded', function() {
             if (window.app && typeof window.app.applyConfig === 'function') {
