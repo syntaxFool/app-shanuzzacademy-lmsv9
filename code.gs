@@ -107,7 +107,7 @@ function doPost(e) {
           }
         });
 
-        writeSheet(ss.getSheetByName('Leads'), flatLeads, ['id', 'name', 'phone', 'email', 'status', 'value', 'interest', 'location', 'source', 'assignedTo', 'notes', 'temperature', 'createdAt']);
+        writeSheet(ss.getSheetByName('Leads'), flatLeads, ['id', 'name', 'phone', 'email', 'status', 'value', 'interest', 'location', 'source', 'assignedTo', 'notes', 'temperature', 'lostReason', 'createdAt']);
         writeSheet(ss.getSheetByName('Activities'), flatActivities, ['id', 'leadId', 'type', 'note', 'timestamp', 'createdBy', 'role']);
         writeSheet(ss.getSheetByName('Tasks'), flatTasks, ['id', 'leadId', 'title', 'status', 'dueDate', 'note', 'createdAt', 'completedAt']);
       }

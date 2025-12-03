@@ -14,6 +14,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Chart.js for Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     
     <style>
         /* --- Native Feel Tweaks --- */
@@ -272,6 +274,63 @@
                     </table>
                 </div>
             </div>
+
+            <!-- Reports / Analytics Dashboard -->
+            <div id="reportsView" class="h-full w-full hidden overflow-auto bg-slate-50">
+                <div class="p-6 space-y-6">
+                    <div>
+                        <h1 class="text-3xl font-bold text-slate-800 mb-2">📊 Analytics Dashboard</h1>
+                        <p class="text-slate-500">Pipeline performance, conversion metrics, and agent leaderboard</p>
+                    </div>
+
+                    <!-- KPI Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="kpiCardsContainer">
+                        <!-- Populated by JavaScript -->
+                    </div>
+
+                    <!-- Charts Section -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Pipeline Funnel -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                            <h2 class="text-lg font-bold text-slate-800 mb-4">Pipeline Funnel</h2>
+                            <canvas id="pipelineFunnelChart" height="250"></canvas>
+                        </div>
+
+                        <!-- Lost Reasons Analysis -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                            <h2 class="text-lg font-bold text-slate-800 mb-4">Why Leads Are Lost</h2>
+                            <canvas id="lostReasonsChart" height="250"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Lead Temperature Distribution -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <h2 class="text-lg font-bold text-slate-800 mb-4">Lead Temperature Distribution</h2>
+                        <canvas id="temperatureChart" height="100"></canvas>
+                    </div>
+
+                    <!-- Agent Leaderboard -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <h2 class="text-lg font-bold text-slate-800 mb-4">🏆 Agent Performance</h2>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-slate-700">
+                                <thead>
+                                    <tr class="border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
+                                        <th class="pb-3 font-bold text-left">Agent</th>
+                                        <th class="pb-3 font-bold text-right">Assigned</th>
+                                        <th class="pb-3 font-bold text-right">Won</th>
+                                        <th class="pb-3 font-bold text-right">Lost</th>
+                                        <th class="pb-3 font-bold text-right">Win Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="agentLeaderboardBody" class="divide-y divide-slate-100">
+                                    <!-- Populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
 
         <button onclick="ui.toggleModal(true)" class="fixed bottom-6 right-6 md:bottom-8 md:right-8 bg-primary hover:bg-indigo-600 text-white w-14 h-14 rounded-full shadow-lg shadow-indigo-500/30 flex items-center justify-center transition transform active:scale-95 z-30"><i class="ph-bold ph-plus text-2xl"></i></button>
@@ -292,6 +351,7 @@
                         <button onclick="app.switchViewMode('kanban')" class="w-full text-left px-4 py-2.5 rounded-lg flex items-center gap-3 hover:bg-slate-50 transition text-slate-700"><i class="ph-bold ph-kanban text-lg"></i> <span class="font-medium">Kanban Board</span></button>
                         <button onclick="app.switchViewMode('table')" class="w-full text-left px-4 py-2.5 rounded-lg flex items-center gap-3 hover:bg-slate-50 transition text-slate-700"><i class="ph-bold ph-table text-lg"></i> <span class="font-medium">Leads Table</span></button>
                         <button id="agentTableBtn" style="display:none" onclick="app.switchViewMode('agentTable')" class="w-full text-left px-4 py-2.5 rounded-lg flex items-center gap-3 hover:bg-slate-50 transition text-slate-700"><i class="ph-bold ph-users text-lg"></i> <span class="font-medium">Agent Table</span></button>
+                        <button id="reportsBtn" style="display:none" onclick="app.switchViewMode('reports')" class="w-full text-left px-4 py-2.5 rounded-lg flex items-center gap-3 hover:bg-slate-50 transition text-slate-700"><i class="ph-bold ph-chart-bar text-lg"></i> <span class="font-medium">Reports</span></button>
                     </div>
                 </div>
                 <div>
@@ -301,10 +361,6 @@
                         <div class="bg-amber-50 rounded-xl border border-amber-100 overflow-hidden"><div class="px-4 py-3 bg-amber-100/50 flex justify-between items-center border-b border-amber-100"><span class="text-amber-800 font-bold text-sm">Today</span><span id="count-today" class="bg-white text-amber-600 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">0</span></div><div id="list-today" class="divide-y divide-amber-100"></div></div>
                         <div class="bg-blue-50 rounded-xl border border-blue-100 overflow-hidden"><div class="px-4 py-3 bg-blue-100/50 flex justify-between items-center border-b border-blue-100"><span class="text-blue-800 font-bold text-sm">Upcoming</span><span id="count-upcoming" class="bg-white text-blue-600 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">0</span></div><div id="list-upcoming" class="divide-y divide-blue-100 max-h-60 overflow-y-auto"></div></div>
                     </div>
-                </div>
-                <div>
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2 mt-8"><i class="ph-bold ph-trophy"></i> Leaderboard</h3>
-                    <div id="leaderboardContainer" class="space-y-2"></div>
                 </div>
                 <div>
                     <div id="settingsSection"></div>
@@ -989,21 +1045,31 @@
                                         const kanban = document.getElementById('kanbanView');
                                         const table = document.getElementById('tableView');
                                         const agentTable = document.getElementById('agentTableView');
+                                        const reports = document.getElementById('reportsView');
                                         if (mode === 'kanban') {
                                             kanban.classList.remove('hidden');
                                             table.classList.add('hidden');
                                             agentTable.classList.add('hidden');
+                                            reports.classList.add('hidden');
                                             this.render(this.store.state);
                                         } else if (mode === 'table') {
                                             kanban.classList.add('hidden');
                                             table.classList.remove('hidden');
                                             agentTable.classList.add('hidden');
+                                            reports.classList.add('hidden');
                                             this.render(this.store.state);
                                         } else if (mode === 'agentTable') {
                                             kanban.classList.add('hidden');
                                             table.classList.add('hidden');
                                             agentTable.classList.remove('hidden');
+                                            reports.classList.add('hidden');
                                             this.renderAgentTable();
+                                        } else if (mode === 'reports') {
+                                            kanban.classList.add('hidden');
+                                            table.classList.add('hidden');
+                                            agentTable.classList.add('hidden');
+                                            reports.classList.remove('hidden');
+                                            this.renderReports();
                                         }
                                         this.renderLeaderboard();
                                     }
@@ -1383,6 +1449,15 @@
                             agentTableBtn.style.display = '';
                         } else {
                             agentTableBtn.style.display = 'none';
+                        }
+                    }
+                    // Show Reports button only for admin/superuser
+                    const reportsBtn = document.getElementById('reportsBtn');
+                    if (reportsBtn) {
+                        if (this.currentUser.role === 'admin' || this.currentUser.role === 'superuser') {
+                            reportsBtn.style.display = '';
+                        } else {
+                            reportsBtn.style.display = 'none';
                         }
                     }
                     this.init();
@@ -1818,7 +1893,199 @@
                 this.renderLeaderboard();
             }
 
-            createCardHTML(lead) {
+            generateReportData() {
+                const leads = this.store.state;
+                const totalLeads = leads.length;
+                const totalValue = leads.reduce((sum, l) => sum + (l.value || 0), 0);
+                const wonLeads = leads.filter(l => l.status === 'Won').length;
+                const conversionRate = totalLeads > 0 ? ((wonLeads / totalLeads) * 100).toFixed(1) : 0;
+                
+                // Pipeline breakdown
+                const pipelineData = {};
+                this.statusConfig.forEach(s => {
+                    pipelineData[s.id] = leads.filter(l => l.status === s.id).length;
+                });
+                
+                // Lost reasons breakdown
+                const lostLeads = leads.filter(l => l.status === 'Lost');
+                const lostReasonsData = {};
+                lostLeads.forEach(l => {
+                    const reason = l.lostReason || 'Unknown';
+                    lostReasonsData[reason] = (lostReasonsData[reason] || 0) + 1;
+                });
+                
+                // Temperature distribution
+                const temperatureData = { Hot: 0, Warm: 0, Cold: 0, 'Not Set': 0 };
+                leads.forEach(l => {
+                    const temp = l.temperature || 'Not Set';
+                    if (temperatureData.hasOwnProperty(temp)) temperatureData[temp]++;
+                    else temperatureData['Not Set']++;
+                });
+                
+                // Agent performance
+                const agentData = {};
+                this.store.users.filter(u => u.role === 'agent' || u.role === 'admin').forEach(user => {
+                    const userKey = user.username || user.id;
+                    const assigned = leads.filter(l => l.assignedTo === userKey).length;
+                    const won = leads.filter(l => l.assignedTo === userKey && l.status === 'Won').length;
+                    const lost = leads.filter(l => l.assignedTo === userKey && l.status === 'Lost').length;
+                    const winRate = assigned > 0 ? ((won / assigned) * 100).toFixed(1) : 0;
+                    agentData[userKey] = { name: user.name, assigned, won, lost, winRate };
+                });
+                
+                return { totalLeads, totalValue, conversionRate, wonLeads, pipelineData, lostReasonsData, temperatureData, agentData };
+            }
+
+            renderReports() {
+                const data = this.generateReportData();
+                this.renderReportKPIs(data);
+                this.renderPipelineFunnelChart(data);
+                this.renderLostReasonsChart(data);
+                this.renderTemperatureChart(data);
+                this.renderAgentLeaderboard(data);
+            }
+
+            renderReportKPIs(data) {
+                const kpiContainer = document.getElementById('kpiCardsContainer');
+                kpiContainer.innerHTML = `
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-slate-500 text-sm font-medium">Total Leads</p>
+                                <p class="text-3xl font-bold text-slate-800 mt-1">${data.totalLeads}</p>
+                            </div>
+                            <i class="ph-bold ph-users text-4xl text-blue-500 opacity-20"></i>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-slate-500 text-sm font-medium">Pipeline Value</p>
+                                <p class="text-3xl font-bold text-slate-800 mt-1">${this.formatCurrency(data.totalValue)}</p>
+                            </div>
+                            <i class="ph-bold ph-currency-inr text-4xl text-green-500 opacity-20"></i>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-slate-500 text-sm font-medium">Conversion Rate</p>
+                                <p class="text-3xl font-bold text-slate-800 mt-1">${data.conversionRate}%</p>
+                            </div>
+                            <i class="ph-bold ph-trend-up text-4xl text-purple-500 opacity-20"></i>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-slate-500 text-sm font-medium">Won Deals</p>
+                                <p class="text-3xl font-bold text-slate-800 mt-1">${data.wonLeads}</p>
+                            </div>
+                            <i class="ph-bold ph-trophy text-4xl text-amber-500 opacity-20"></i>
+                        </div>
+                    </div>
+                `;
+            }
+
+            renderPipelineFunnelChart(data) {
+                const ctx = document.getElementById('pipelineFunnelChart');
+                if (!ctx) return;
+                
+                const labels = this.statusConfig.map(s => s.id);
+                const values = labels.map(label => data.pipelineData[label] || 0);
+                const colors = this.statusConfig.map(s => s.color.replace('bg-', '').split('-')[0]);
+                
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Leads by Status',
+                            data: values,
+                            backgroundColor: ['#3b82f6', '#8b5cf6', '#10b981', '#ef4444'],
+                            borderRadius: 6,
+                            borderSkipped: false
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: { legend: { display: false } },
+                        scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                    }
+                });
+            }
+
+            renderLostReasonsChart(data) {
+                const ctx = document.getElementById('lostReasonsChart');
+                if (!ctx) return;
+                
+                const reasons = Object.keys(data.lostReasonsData);
+                const values = Object.values(data.lostReasonsData);
+                const colors = ['#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e', '#06b6d4'];
+                
+                new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: reasons,
+                        datasets: [{
+                            data: values,
+                            backgroundColor: colors.slice(0, reasons.length),
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { padding: 15, font: { size: 12 } } }
+                        }
+                    }
+                });
+            }
+
+            renderTemperatureChart(data) {
+                const ctx = document.getElementById('temperatureChart');
+                if (!ctx) return;
+                
+                const labels = ['Hot', 'Warm', 'Cold', 'Not Set'];
+                const values = labels.map(label => data.temperatureData[label] || 0);
+                
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Lead Count',
+                            data: values,
+                            backgroundColor: ['#ef4444', '#f97316', '#3b82f6', '#9ca3af'],
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        indexAxis: 'x',
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                    }
+                });
+            }
+
+            renderAgentLeaderboard(data) {
+                const tbody = document.getElementById('agentLeaderboardBody');
+                tbody.innerHTML = Object.entries(data.agentData).map(([key, agent]) => `
+                    <tr>
+                        <td class="py-3 px-4 font-semibold text-slate-800">${agent.name}</td>
+                        <td class="py-3 px-4 text-right">${agent.assigned}</td>
+                        <td class="py-3 px-4 text-right"><span class="bg-green-100 text-green-700 text-sm font-bold px-2 py-1 rounded">${agent.won}</span></td>
+                        <td class="py-3 px-4 text-right"><span class="bg-red-100 text-red-700 text-sm font-bold px-2 py-1 rounded">${agent.lost}</span></td>
+                        <td class="py-3 px-4 text-right"><span class="bg-blue-100 text-blue-700 text-sm font-bold px-2 py-1 rounded">${agent.winRate}%</span></td>
+                    </tr>
+                `).join('');
+            }            createCardHTML(lead) {
                                 const scores = this.getLeadScores(lead);
                 const idx = this.statusConfig.findIndex(s => s.id === lead.status);
                 const prev = idx > 0 ? this.statusConfig[idx-1].id : null;
