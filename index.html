@@ -679,6 +679,10 @@
                                                 renderTable(leads) {
                                                     const tbody = document.getElementById('tableBody');
                                                     if (!tbody) return;
+                                                    
+                                                    // Debug: log available users
+                                                    console.log('Available users in store:', this.store.users);
+                                                    
                                                     // Filter for agent/user: only show assigned leads
                                                     let filteredLeads = leads;
                                                     if (this.currentUser && (this.currentUser.role === 'agent' || this.currentUser.role === 'user')) {
@@ -861,6 +865,9 @@
                                                         return String(u.username).toLowerCase() === String(username).toLowerCase() || 
                                                                String(u.id).toLowerCase() === String(username).toLowerCase();
                                                     });
+                                                    if (!user) {
+                                                        console.warn(`User not found for: "${username}". Available usernames:`, this.store.users.map(u => u.username));
+                                                    }
                                                     return user && user.name ? user.name : username;
                                                 }
 
