@@ -277,23 +277,25 @@
                             <button onclick="app.clearSelection()" class="bg-slate-300 hover:bg-slate-400 text-slate-700 px-4 py-2 rounded text-sm font-semibold">Clear</button>
                         </div>
                     </div>
-                    <table class="w-full text-left border-collapse">
+                    <div class="overflow-x-auto -mx-4 sm:mx-0">
+                    <table class="w-full text-left border-collapse min-w-[600px]">
                         <thead>
-                            <tr class="border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
-                                <th class="pb-3 font-bold pl-4"><input type="checkbox" id="selectAllCheckbox" onchange="app.toggleSelectAll(this.checked)" class="w-4 h-4 rounded"></th>
-                                <th class="pb-3 font-bold pl-4 cursor-pointer hover:text-slate-700" onclick="app.sortTable('name')">Name <span id="sort-name" class="ml-1"></span></th>
-                                <th class="pb-3 font-bold cursor-pointer hover:text-slate-700" onclick="app.sortTable('phone')">Contact <span id="sort-phone" class="ml-1"></span></th>
-                                <th class="pb-3 font-bold cursor-pointer hover:text-slate-700" onclick="app.sortTable('status')">Status <span id="sort-status" class="ml-1"></span></th>
-                                <th class="pb-3 font-bold cursor-pointer hover:text-slate-700" onclick="app.sortTable('lostReason')">Lost Reason <span id="sort-lostReason" class="ml-1"></span></th>
-                                <th class="pb-3 font-bold cursor-pointer hover:text-slate-700" onclick="app.sortTable('interest')">Interest <span id="sort-interest" class="ml-1"></span></th>
-                                <th class="pb-3 font-bold cursor-pointer hover:text-slate-700" onclick="app.sortTable('source')">Source <span id="sort-source" class="ml-1"></span></th>
-                                <th class="pb-3 font-bold cursor-pointer hover:text-slate-700" onclick="app.sortTable('assignedTo')">Assigned <span id="sort-assignedTo" class="ml-1"></span></th>
-                                <th class="pb-3 font-bold text-right pr-4 cursor-pointer hover:text-slate-700" onclick="app.sortTable('value')">Value <span id="sort-value" class="ml-1"></span></th>
-                                <th class="pb-3 font-bold w-10"></th>
+                            <tr class="border-b border-slate-200 bg-slate-50 text-slate-500 text-xs uppercase tracking-wider sticky top-0">
+                                <th class="pb-2 sm:pb-3 font-bold pl-3 sm:pl-4"><input type="checkbox" id="selectAllCheckbox" onchange="app.toggleSelectAll(this.checked)" class="w-4 h-4 rounded"></th>
+                                <th class="pb-2 sm:pb-3 font-bold pl-3 sm:pl-4 cursor-pointer hover:text-slate-700" onclick="app.sortTable('name')">Name <span id="sort-name" class="ml-1 hidden sm:inline"></span></th>
+                                <th class="pb-2 sm:pb-3 font-bold px-2 sm:px-3 cursor-pointer hover:text-slate-700 hidden sm:table-cell" onclick="app.sortTable('phone')">Contact <span id="sort-phone" class="ml-1"></span></th>
+                                <th class="pb-2 sm:pb-3 font-bold px-2 sm:px-3 cursor-pointer hover:text-slate-700" onclick="app.sortTable('status')">Status <span id="sort-status" class="ml-1 hidden sm:inline"></span></th>
+                                <th class="pb-2 sm:pb-3 font-bold px-2 sm:px-3 cursor-pointer hover:text-slate-700 hidden md:table-cell" onclick="app.sortTable('lostReason')">Lost Reason <span id="sort-lostReason" class="ml-1"></span></th>
+                                <th class="pb-2 sm:pb-3 font-bold px-2 sm:px-3 cursor-pointer hover:text-slate-700 hidden lg:table-cell" onclick="app.sortTable('interest')">Interest <span id="sort-interest" class="ml-1"></span></th>
+                                <th class="pb-2 sm:pb-3 font-bold px-2 sm:px-3 cursor-pointer hover:text-slate-700 hidden lg:table-cell" onclick="app.sortTable('source')">Source <span id="sort-source" class="ml-1"></span></th>
+                                <th class="pb-2 sm:pb-3 font-bold px-2 sm:px-3 cursor-pointer hover:text-slate-700 hidden sm:table-cell" onclick="app.sortTable('assignedTo')">Assigned <span id="sort-assignedTo" class="ml-1"></span></th>
+                                <th class="pb-2 sm:pb-3 font-bold text-right px-2 sm:px-3 cursor-pointer hover:text-slate-700" onclick="app.sortTable('value')">Value <span id="sort-value" class="ml-1 hidden sm:inline"></span></th>
+                                <th class="pb-2 sm:pb-3 font-bold w-10 px-2 sm:px-3"></th>
                             </tr>
                         </thead>
-                        <tbody id="tableBody" class="text-sm text-slate-700 divide-y divide-slate-100"></tbody>
+                        <tbody id="tableBody" class="text-xs sm:text-sm text-slate-700 divide-y divide-slate-100"></tbody>
                     </table>
+                    </div>
                 </div>
             </div>
             <div id="agentTableView" class="h-full w-full hidden overflow-auto bg-white">
@@ -1265,18 +1267,20 @@
                                                         const hasPendingTask = lead.tasks && lead.tasks.some(t => t.status === 'pending');
                                                         const showTaskWarning = isActiveStage && !hasPendingTask;
                                                         return `
-                                                        <tr class="table-row-hover ${showTaskWarning ? 'bg-red-50' : ''}">
-                                                            <td class="pl-4 py-2"><input type="checkbox" class="leadCheckbox w-4 h-4 rounded" data-leadId="${lead.id}" onchange="app.updateBulkActionsBar()"></td>
-                                                            <td class="pl-4 py-2 font-bold"><span class="inline-flex items-center gap-2">${this.escapeHtml(lead.name)}${showTaskWarning ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700" title="Active lead with no pending task"><i class="ph-bold ph-warning"></i> No Action</span>` : ''}</span></td>
-                                                            <td class="py-2">${this.escapeHtml(lead.phone || '')}<br><span class="text-xs text-slate-400">${this.escapeHtml(lead.email || '')}</span></td>
-                                                            <td class="py-2">${this.escapeHtml(lead.status)}</td>
-                                                            <td class="py-2">${lead.status === 'Lost' && lead.lostReason ? `<span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded font-medium">${this.escapeHtml(lead.lostReason)}</span>` : '-'}</td>
-                                                            <td class="py-2">${this.escapeHtml(lead.interest)}</td>
-                                                            <td class="py-2">${this.escapeHtml(lead.source)}</td>
-                                                            <td class="py-2">${this.escapeHtml(this.getUserName(lead.assignedTo))}</td>
-                                                            <td class="py-2 text-right pr-4">${this.formatCurrency(lead.value)}</td>
-                                                            <td class="py-2 text-right">
-                                                                <button onclick="app.editLead('${lead.id}')" class="text-primary hover:underline text-xs font-bold">Edit</button>
+                                                        <tr class="table-row-hover ${showTaskWarning ? 'bg-red-50' : 'hover:bg-slate-50'} active:bg-slate-100 transition">
+                                                            <td class="pl-3 sm:pl-4 py-2 sm:py-3"><input type="checkbox" class="leadCheckbox w-4 h-4 rounded" data-leadId="${lead.id}" onchange="app.updateBulkActionsBar()"></td>
+                                                            <td class="pl-3 sm:pl-4 py-2 sm:py-3 font-bold text-slate-800"><span class="inline-flex items-center gap-1.5">${this.escapeHtml(lead.name)}${showTaskWarning ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 flex-shrink-0" title="Active lead with no pending task"><i class="ph-bold ph-warning text-sm"></i> <span class="hidden sm:inline">No Action</span></span>` : ''}</span></td>
+                                                            <td class="px-2 sm:px-3 py-2 sm:py-3 hidden sm:table-cell text-slate-600"><div class="text-xs">${this.escapeHtml(lead.phone || '-')}</div><div class="text-xs text-slate-400 line-clamp-1">${this.escapeHtml(lead.email || '')}</div></td>
+                                                            <td class="px-2 sm:px-3 py-2 sm:py-3"><span class="inline-block px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded font-medium whitespace-nowrap">${this.escapeHtml(lead.status)}</span></td>
+                                                            <td class="px-2 sm:px-3 py-2 sm:py-3 hidden md:table-cell">${lead.status === 'Lost' && lead.lostReason ? `<span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded font-medium">${this.escapeHtml(lead.lostReason)}</span>` : '-'}</td>
+                                                            <td class="px-2 sm:px-3 py-2 sm:py-3 hidden lg:table-cell text-slate-600">${this.escapeHtml(lead.interest || '-')}</td>
+                                                            <td class="px-2 sm:px-3 py-2 sm:py-3 hidden lg:table-cell text-slate-600">${this.escapeHtml(lead.source || '-')}</td>
+                                                            <td class="px-2 sm:px-3 py-2 sm:py-3 hidden sm:table-cell text-slate-600"><span class="text-xs font-medium">${this.escapeHtml(this.getUserName(lead.assignedTo))}</span></td>
+                                                            <td class="px-2 sm:px-3 py-2 sm:py-3 text-right text-slate-700 font-semibold text-xs sm:text-sm">${this.formatCurrency(lead.value)}</td>
+                                                            <td class="px-2 sm:px-3 py-2 sm:py-3 text-right">
+                                                                <button onclick="app.editLead('${lead.id}')" class="text-primary hover:text-primary-dark active:text-primary font-bold text-xs sm:text-sm px-2 py-1 rounded hover:bg-primary/5 active:bg-primary/10 transition">
+                                                                    <i class="ph-bold ph-pencil"></i> <span class="hidden sm:inline">Edit</span>
+                                                                </button>
                                                             </td>
                                                         </tr>
                                                     `;
