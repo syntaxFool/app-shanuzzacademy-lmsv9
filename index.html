@@ -948,60 +948,137 @@
                                                                                                                 sessionStorage.setItem(reminderKey, JSON.stringify(remindedTasks));
                                                                                                             }
 
-                                                                                                            async checkForServerUpdates() {
-                                                                                                                if (!this.store.config.dbUrl) return;
-                                                                                                                
-                                                                                                                try {
-                                                                                                                    const response = await fetch(this.store.config.dbUrl, { 
-                                                                                                                        method: 'GET', 
-                                                                                                                        redirect: 'follow', 
-                                                                                                                        mode: 'cors',
-                                                                                                                        credentials: 'omit'
-                                                                                                                    });
-                                                                                                                    if (!response.ok) return;
-                                                                                                                    const data = await response.json();
-                                                                                                                    
-                                                                                                                    // Check if server has new data
-                                                                                                                    if (data.lastUpdate && data.lastUpdate > this.lastServerUpdate) {
-                                                                                                                        // Check if user is currently editing (modal is open)
-                                                                                                                        const isModalOpen = document.getElementById('leadModal') && document.getElementById('leadModal').classList.contains('open');
-                                                                                                                        
-                                                                                                                        if (isModalOpen) {
-                                                                                                                            // Don't interrupt, just notify
-                                                                                                                            this.notify('New data available. Please save and refresh.', 'info');
-                                                                                                                        } else {
-                                                                                                                            // Safe to auto-refresh
-                                                                                                                            console.log('Auto-refreshing data from server...');
-                                                                                                                            await this.store.syncWithCloud();
-                                                                                                                            this.render(this.store.state);
-                                                                                                                            
-                                                                                                                            // Get recent changes summary
-                                                                                                                            const recentLogs = data.logs ? data.logs.slice(0, 3) : [];
-                                                                                                                            let notification = 'Data updated from other users';
-                                                                                                                            if (recentLogs.length > 0) {
-                                                                                                                                const changes = recentLogs.map(log => {
-                                                                                                                                    const match = log.message.match(/^(.+?):\s+(.+)$/);
-                                                                                                                                    if (match) {
-                                                                                                                                        return `${match[2].substring(0, 50)}`;
-                                                                                                                                    }
-                                                                                                                                    return log.message.substring(0, 50);
-                                                                                                                                }).filter(Boolean);
-                                                                                                                                
-                                                                                                                                if (changes.length > 0) {
-                                                                                                                                    notification = changes.slice(0, 2).join(', ');
-                                                                                                                                    if (recentLogs.length > 2) notification += ', +more';
-                                                                                                                                }
-                                                                                                                            }
-                                                                                                                            this.notify(notification, 'success');
-                                                                                                                        }
-                                                                                                                        // Update local tracking
-                                                                                                                        this.lastServerUpdate = data.lastUpdate;
-                                                                                                                    }
-                                                                                                                } catch (e) {
-                                                                                                                    // Silent fail - don't spam errors
-                                                                                                                    console.debug('Update check failed (expected if offline)', e);
-                                                                                                                }
-                                                                                                            }
+            // Track previous state for change detection
+            previousState = null;
+
+            detectChanges(oldLeads, newLeads) {
+                const changes = [];
+                
+                // Create maps for quick lookup
+                const oldMap = {};
+                const newMap = {};
+                oldLeads.forEach(l => oldMap[l.id] = l);
+                newLeads.forEach(l => newMap[l.id] = l);
+                
+                // Check for modified leads
+                newLeads.forEach(newLead => {
+                    const oldLead = oldMap[newLead.id];
+                    if (!oldLead) return; // New lead, not a change
+                    
+                    const fieldChanges = this.getFieldChanges(oldLead, newLead);
+                    if (fieldChanges.length > 0) {
+                        changes.push({
+                            leadId: newLead.id,
+                            leadName: newLead.name,
+                            fieldChanges: fieldChanges
+                        });
+                    }
+                });
+                
+                return changes;
+            }
+
+            getFieldChanges(oldLead, newLead) {
+                const changes = [];
+                const fieldsToTrack = ['temperature', 'status', 'assignedTo', 'interest', 'value', 'lostReason'];
+                
+                fieldsToTrack.forEach(field => {
+                    const oldVal = oldLead[field];
+                    const newVal = newLead[field];
+                    
+                    if (oldVal !== newVal && newVal !== undefined && newVal !== null && newVal !== '') {
+                        changes.push({
+                            field: field,
+                            oldValue: oldVal,
+                            newValue: newVal
+                        });
+                    }
+                });
+                
+                return changes;
+            }
+
+            formatChangeMessage(change) {
+                if (change.fieldChanges.length === 0) return null;
+                
+                const fieldLabel = {
+                    'temperature': 'Temperature',
+                    'status': 'Status',
+                    'assignedTo': 'Assigned To',
+                    'interest': 'Interest',
+                    'value': 'Value',
+                    'lostReason': 'Lost Reason'
+                };
+                
+                const changes = change.fieldChanges.map(fc => {
+                    const label = fieldLabel[fc.field];
+                    if (fc.field === 'assignedTo') {
+                        // Get user name if available
+                        const oldUser = fc.oldValue ? this.getUserName(fc.oldValue) : 'Unassigned';
+                        const newUser = fc.newValue ? this.getUserName(fc.newValue) : 'Unassigned';
+                        return `${label} from ${oldUser} to ${newUser}`;
+                    } else if (fc.field === 'value') {
+                        return `${label} from ${this.formatCurrency(fc.oldValue || 0)} to ${this.formatCurrency(fc.newValue || 0)}`;
+                    } else {
+                        return `${label} from ${fc.oldValue || 'None'} to ${fc.newValue}`;
+                    }
+                }).join(', ');
+                
+                return `${change.leadName}: ${changes}`;
+            }
+
+            async checkForServerUpdates() {
+                if (!this.store.config.dbUrl) return;
+                
+                try {
+                    const response = await fetch(this.store.config.dbUrl, { 
+                        method: 'GET', 
+                        redirect: 'follow', 
+                        mode: 'cors',
+                        credentials: 'omit'
+                    });
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    
+                    // Check if server has new data
+                    if (data.lastUpdate && data.lastUpdate > this.lastServerUpdate) {
+                        // Keep a copy of current state before syncing
+                        const previousLeads = JSON.parse(JSON.stringify(this.store.state));
+                        
+                        // Check if user is currently editing (modal is open)
+                        const isModalOpen = document.getElementById('leadModal') && document.getElementById('leadModal').classList.contains('open');
+                        
+                        if (isModalOpen) {
+                            // Don't interrupt, just notify
+                            this.notify('New data available. Please save and refresh.', 'info');
+                        } else {
+                            // Safe to auto-refresh
+                            console.log('Auto-refreshing data from server...');
+                            await this.store.syncWithCloud();
+                            
+                            // Detect changes
+                            const changes = this.detectChanges(previousLeads, this.store.state);
+                            
+                            if (changes.length > 0) {
+                                // Show detailed notification for first change (most recent)
+                                const message = this.formatChangeMessage(changes[0]);
+                                if (message) {
+                                    this.notify(message, 'info');
+                                }
+                            } else {
+                                this.notify('Data updated from other users', 'success');
+                            }
+                            
+                            this.render(this.store.state);
+                        }
+                        // Update local tracking
+                        this.lastServerUpdate = data.lastUpdate;
+                    }
+                } catch (e) {
+                    // Silent fail - don't spam errors
+                    console.debug('Update check failed (expected if offline)', e);
+                }
+            }
 
                                                                                                             async autoSyncWithNotification() {
                                                                                                                 if (!this.currentUser || !(this.currentUser.role === 'agent' || this.currentUser.role === 'user')) return;
