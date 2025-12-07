@@ -448,7 +448,12 @@
                     </div>
                 </div>
                 <div>
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2"><i class="ph-bold ph-calendar-check"></i> Follow Ups</h3>
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2"><i class="ph-bold ph-calendar-check"></i> Follow Ups</h3>
+                        <select id="followUpAgentFilter" onchange="app.renderFollowUps()" class="bg-white border border-slate-200 rounded px-2 py-1 text-xs text-slate-600 focus:ring-2 focus:ring-primary outline-none">
+                            <option value="">All Agents</option>
+                        </select>
+                    </div>
                     <div class="space-y-4">
                         <div class="bg-red-50 rounded-xl border border-red-100 overflow-hidden"><div class="px-4 py-3 bg-red-100/50 flex justify-between items-center border-b border-red-100"><span class="text-red-800 font-bold text-sm">Overdue</span><span id="count-overdue" class="bg-white text-red-600 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">0</span></div><div id="list-overdue" class="divide-y divide-red-100"></div></div>
                         <div class="bg-amber-50 rounded-xl border border-amber-100 overflow-hidden"><div class="px-4 py-3 bg-amber-100/50 flex justify-between items-center border-b border-amber-100"><span class="text-amber-800 font-bold text-sm">Today</span><span id="count-today" class="bg-white text-amber-600 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">0</span></div><div id="list-today" class="divide-y divide-amber-100"></div></div>
@@ -2612,11 +2617,36 @@
             renderFollowUps() {
                 const today = new Date().toISOString().split('T')[0];
                 let od=[], td=[], uc=[];
+                
+                // Get selected agent filter
+                const filterSelect = document.getElementById('followUpAgentFilter');
+                const selectedAgent = filterSelect ? filterSelect.value : '';
+                
+                // Populate agent filter dropdown (only populate once)
+                if (filterSelect && filterSelect.options.length === 1) {
+                    const agents = new Set();
+                    this.store.state.forEach(l => {
+                        if (l.assignedTo) agents.add(l.assignedTo);
+                    });
+                    // Sort agents and add to dropdown
+                    Array.from(agents).sort().forEach(agent => {
+                        const agentName = this.getUserName(agent);
+                        const opt = document.createElement('option');
+                        opt.value = agent;
+                        opt.textContent = agentName;
+                        filterSelect.appendChild(opt);
+                    });
+                }
+                
                 // Filter for agent/user: only show follow-ups for assigned leads
                 let leads = this.store.state;
                 if (this.currentUser && (this.currentUser.role === 'agent' || this.currentUser.role === 'user')) {
                     leads = leads.filter(lead => lead.assignedTo === this.currentUser.username || lead.assignedTo === this.currentUser.id);
+                } else if (selectedAgent) {
+                    // Admin can filter by selected agent
+                    leads = leads.filter(lead => lead.assignedTo === selectedAgent);
                 }
+                
                 leads.forEach(l => {
                     const f = l.activities?.find(a => a.type==='follow_up');
                     if(f && f.note) {
