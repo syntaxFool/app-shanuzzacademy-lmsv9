@@ -2,6 +2,9 @@ function doGet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   setupSheets(ss);
   
+  // Check if this is a lightweight sync check request
+  const urlParams = new URLSearchParams(PropertiesService.getScriptProperties().getProperty('url_params') || '');
+  
   const leads = readSheet(ss.getSheetByName('Leads'));
   const activities = readSheet(ss.getSheetByName('Activities'));
   const tasks = readSheet(ss.getSheetByName('Tasks'));
@@ -60,13 +63,18 @@ function doGet() {
     lead.value = parseFloat(lead.value) || 0;
   });
 
+  const serverTime = new Date().getTime();
+  const lastUpdate = parseInt(PropertiesService.getScriptProperties().getProperty('LAST_UPDATE') || 0);
+
   return ContentService.createTextOutput(JSON.stringify({
     leads: leads,
     users: users,
     logs: logs,
     interests: interests,
     settings: { locations: locations, sources: sources, taskTitles: taskTitles, scriptUrl: scriptUrl },
-    config: { appTitle: appTitle }
+    config: { appTitle: appTitle },
+    serverTime: serverTime,
+    lastUpdate: lastUpdate
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -112,6 +120,9 @@ function doPost(e) {
         writeSheet(ss.getSheetByName('Tasks'), flatTasks, ['id', 'leadId', 'title', 'status', 'dueDate', 'note', 'createdAt', 'completedAt']);
       }
       
+      // Update the LAST_UPDATE timestamp after successful save
+      updateLastModified();
+      
       return ContentService.createTextOutput(JSON.stringify({ status: 'success' })).setMimeType(ContentService.MimeType.JSON);
     }
     // New: Save ScriptURL and AppName to Settings
@@ -146,6 +157,10 @@ function doPost(e) {
       // Set ScriptURL and AppTitle values
       if (data.scriptUrl) settingsSheet.getRange(2, scriptUrlCol + 1).setValue(data.scriptUrl);
       if (data.appTitle) settingsSheet.getRange(2, appTitleCol + 1).setValue(data.appTitle);
+      
+      // Update the LAST_UPDATE timestamp
+      updateLastModified();
+      
       return ContentService.createTextOutput(JSON.stringify({ status: 'success' })).setMimeType(ContentService.MimeType.JSON);
     }
   } catch (error) {
@@ -191,4 +206,8 @@ function writeSheet(sheet, data, headers) {
     output.push(row);
   });
   sheet.getRange(1, 1, output.length, headers.length).setValues(output);
+}
+
+function updateLastModified() {
+  PropertiesService.getScriptProperties().setProperty('LAST_UPDATE', new Date().getTime().toString());
 }

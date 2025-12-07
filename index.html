@@ -734,6 +734,11 @@
                     console.log('Backend config:', cloudData.config);
                     // Always sync appTitle from backend config if present
                     if (cloudData.config && cloudData.config.appTitle) this.config.appTitle = cloudData.config.appTitle;
+                    // Capture server time for real-time sync
+                    if (cloudData.serverTime) {
+                        if (window.app) window.app.lastSyncTime = cloudData.serverTime;
+                        if (window.app) window.app.lastServerUpdate = cloudData.lastUpdate || 0;
+                    }
                     this.saveLocal();
                     if(window.app && typeof window.app.applyConfig==='function'){window.app.applyConfig();}
                     if(window.app && typeof window.app.renderLeaderboard==='function'){window.app.renderLeaderboard();}
@@ -914,6 +919,10 @@
                                                                                                                 setInterval(() => {
                                                                                                                     this.checkUpcomingTasks();
                                                                                                                 }, 60000); // Check tasks every minute
+                                                                                                                // Check for server updates every 10 seconds (real-time sync)
+                                                                                                                setInterval(() => {
+                                                                                                                    this.checkForServerUpdates();
+                                                                                                                }, 10000);
                                                                                                             }
 
                                                                                                             updateAssignedLeadIds() {
@@ -948,6 +957,38 @@
                                                                                                                 });
                                                                                                                 
                                                                                                                 sessionStorage.setItem(reminderKey, JSON.stringify(remindedTasks));
+                                                                                                            }
+
+                                                                                                            async checkForServerUpdates() {
+                                                                                                                if (!this.store.config.dbUrl) return;
+                                                                                                                
+                                                                                                                try {
+                                                                                                                    const response = await fetch(this.store.config.dbUrl, { method: 'GET', redirect: 'follow', credentials: 'omit' });
+                                                                                                                    if (!response.ok) return;
+                                                                                                                    const data = await response.json();
+                                                                                                                    
+                                                                                                                    // Check if server has new data
+                                                                                                                    if (data.lastUpdate && data.lastUpdate > this.lastServerUpdate) {
+                                                                                                                        // Check if user is currently editing (modal is open)
+                                                                                                                        const isModalOpen = document.getElementById('leadModal') && document.getElementById('leadModal').classList.contains('open');
+                                                                                                                        
+                                                                                                                        if (isModalOpen) {
+                                                                                                                            // Don't interrupt, just notify
+                                                                                                                            this.notify('New data available. Please save and refresh.', 'info');
+                                                                                                                        } else {
+                                                                                                                            // Safe to auto-refresh
+                                                                                                                            console.log('Auto-refreshing data from server...');
+                                                                                                                            await this.store.syncWithCloud();
+                                                                                                                            this.render(this.store.state);
+                                                                                                                            this.notify('Data updated from other users', 'success');
+                                                                                                                        }
+                                                                                                                        // Update local tracking
+                                                                                                                        this.lastServerUpdate = data.lastUpdate;
+                                                                                                                    }
+                                                                                                                } catch (e) {
+                                                                                                                    // Silent fail - don't spam errors
+                                                                                                                    console.debug('Update check failed (expected if offline)', e);
+                                                                                                                }
                                                                                                             }
 
                                                                                                             async autoSyncWithNotification() {
@@ -1543,6 +1584,8 @@
                 this.dateFilter = 'till-date';
                 this.chartInstances = {};
                 this.settingsAutocompleteInitialized = false;
+                this.lastSyncTime = 0;
+                this.lastServerUpdate = 0;
                 this.filters = {
                     search: '',
                     status: '',
