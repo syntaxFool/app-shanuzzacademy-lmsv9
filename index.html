@@ -1542,6 +1542,7 @@
                 this.sortDirection = 'asc';
                 this.dateFilter = 'till-date';
                 this.chartInstances = {};
+                this.settingsAutocompleteInitialized = false;
                 this.filters = {
                     search: '',
                     status: '',
@@ -1573,7 +1574,7 @@
                     });
 
                     if (matches.length > 0) {
-                        suggestions.innerHTML = matches.map(m => {
+                        suggestions.innerHTML = matches.map((m, index) => {
                             const text = typeof m === 'string' ? m : m.name;
                             const isState = text.startsWith('State - ') || text.startsWith('Union Territory - ');
                             const isCity = text.startsWith('Cities - ');
@@ -1581,17 +1582,18 @@
                             const subtext = typeof m === 'string' ? '' : `₹${m.value.toLocaleString('en-IN')}`;
                             const indent = isCity ? 'pl-6' : '';
                             const badge = isState ? '<span class="text-xs bg-primary text-white px-2 py-0.5 rounded ml-2">State</span>' : isCity ? '<span class="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded ml-2">City</span>' : '';
-                            return `<div class="suggestion-item ${indent} py-2 cursor-pointer hover:bg-slate-100" data-val="${text}">${displayText} ${badge} <span class="text-xs text-slate-400 float-right">${subtext}</span></div>`;
+                            return `<div class="suggestion-item py-2 cursor-pointer hover:bg-slate-100 ${indent}" data-index="${index}">${displayText} ${badge} <span class="text-xs text-slate-400 float-right">${subtext}</span></div>`;
                         }).join('');
                         suggestions.classList.remove('hidden');
                         
                         const items = suggestions.querySelectorAll('.suggestion-item');
-                        items.forEach((item, index) => {
+                        items.forEach((item) => {
                             item.addEventListener('click', () => {
+                                const index = parseInt(item.getAttribute('data-index'));
                                 const selected = matches[index];
                                 const text = typeof selected === 'string' ? selected : selected.name;
                                 const cleanText = text.replace(/^(State - |Union Territory - |Cities - )/, '');
-                                onSelect(cleanText);
+                                onSelect(selected);
                                 suggestions.classList.add('hidden');
                             });
                         });
@@ -1600,6 +1602,7 @@
                     }
                 });
 
+                // Close suggestions when clicking outside
                 document.addEventListener('click', (e) => {
                     if (!input.contains(e.target) && !suggestions.contains(e.target)) {
                         suggestions.classList.add('hidden');
@@ -1625,7 +1628,9 @@
                 });
 
                 this.setupAutocomplete('interestInput', 'interestSuggestions', getMasterList(), (selected) => {
-                    this.addInterest(selected.name, selected.value);
+                    const name = typeof selected === 'string' ? selected : selected.name;
+                    const value = typeof selected === 'string' ? 0 : selected.value;
+                    this.addInterest(name, value);
                     document.getElementById('interestInput').value = ''; 
                 });
             }
@@ -1658,21 +1663,41 @@
 
             // --- LOCATION & SOURCE LOGIC ---
             initSettingsAutocomplete() {
+                // Only initialize once to avoid duplicate event listeners
+                if (this.settingsAutocompleteInitialized) {
+                    // Just clear the input values
+                    const clearInput = (inputId) => {
+                        const input = document.getElementById(inputId);
+                        if (input) input.value = '';
+                    };
+                    clearInput('locationInput');
+                    clearInput('sourceInput');
+                    clearInput('taskInput');
+                    return;
+                }
+
                 const locations = this.store.settings.locations || [];
                 const sources = this.store.settings.sources || [];
                 const taskTitles = this.store.settings.taskTitles || [];
 
+                // Set up fresh autocompletes
                 this.setupAutocomplete('locationInput', 'locationSuggestions', locations, (selected) => {
-                    document.getElementById('locationInput').value = selected;
+                    const text = typeof selected === 'string' ? selected : selected.name;
+                    const cleanText = text.replace(/^(State - |Union Territory - |Cities - )/, '');
+                    document.getElementById('locationInput').value = cleanText;
                 });
 
                 this.setupAutocomplete('sourceInput', 'sourceSuggestions', sources, (selected) => {
-                    document.getElementById('sourceInput').value = selected;
+                    const text = typeof selected === 'string' ? selected : selected.name;
+                    document.getElementById('sourceInput').value = text;
                 });
 
                 this.setupAutocomplete('taskInput', 'taskSuggestions', taskTitles, (selected) => {
-                    document.getElementById('taskInput').value = selected;
+                    const text = typeof selected === 'string' ? selected : selected.name;
+                    document.getElementById('taskInput').value = text;
                 });
+
+                this.settingsAutocompleteInitialized = true;
             }
 
             // --- STANDARD LOGIC ---
@@ -2735,7 +2760,11 @@
                         }
                         document.getElementById('tab-btn-activity').disabled=true; 
                         document.getElementById('tab-btn-contact').disabled=true; 
-                    } 
+                    }
+                    // Setup autocompletes when modal opens
+                    if (window.app && typeof window.app.initSettingsAutocomplete === 'function') {
+                        window.app.initSettingsAutocomplete();
+                    }
                     m.classList.remove('hidden'); requestAnimationFrame(()=>m.classList.add('open')); 
                     // Add swipe-down handler for mobile
                     if (window.innerWidth < 768) {
