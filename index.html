@@ -110,10 +110,10 @@
 <body class="bg-slate-50 text-slate-800 h-[100dvh] w-full flex flex-col overflow-hidden">
 
     <!-- NOTIFICATION TRAY -->
-    <div id="notificationTray" class="fixed top-3 left-1/2 -translate-x-1/2 z-[100] bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 text-sm font-semibold transition-all duration-300 opacity-0 pointer-events-none">
-        <i class="ph-bold ph-bell"></i>
-        <span id="notificationMessage">You have a new lead assigned!</span>
-        <button onclick="ui.hideNotification()" class="ml-4 text-white/80 hover:text-white"><i class="ph-bold ph-x"></i></button>
+    <div id="notificationTray" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-blue-500 text-white px-5 py-3.5 rounded-xl shadow-lg flex items-center gap-3 text-sm font-semibold transition-all duration-300 opacity-0 pointer-events-none max-w-sm md:max-w-md">
+        <i class="ph-bold ph-info text-lg flex-shrink-0"></i>
+        <span id="notificationMessage" class="flex-1 text-white">You have a new lead assigned!</span>
+        <button onclick="ui.hideNotification()" class="ml-2 text-white/70 hover:text-white transition flex-shrink-0"><i class="ph-bold ph-x text-lg"></i></button>
     </div>
 
     <!-- LOADING OVERLAY -->
@@ -843,16 +843,16 @@
                                                                                                                             }
                                                                                                                             
                                                                                                                             const typeConfig = {
-                                                                                                                                success: { bg: 'bg-green-50', border: 'border-green-100', icon: 'ph-check-circle', text: 'text-green-700', badge: 'bg-green-100' },
-                                                                                                                                error: { bg: 'bg-red-50', border: 'border-red-100', icon: 'ph-warning-circle', text: 'text-red-700', badge: 'bg-red-100' },
-                                                                                                                                warning: { bg: 'bg-amber-50', border: 'border-amber-100', icon: 'ph-warning', text: 'text-amber-700', badge: 'bg-amber-100' },
-                                                                                                                                info: { bg: 'bg-blue-50', border: 'border-blue-100', icon: 'ph-info', text: 'text-blue-700', badge: 'bg-blue-100' }
+                                                                                                                                success: { bg: 'bg-green-50', border: 'border-green-200', icon: 'ph-check-circle', text: 'text-green-700', iconColor: 'text-green-600' },
+                                                                                                                                error: { bg: 'bg-red-50', border: 'border-red-200', icon: 'ph-warning-circle', text: 'text-red-700', iconColor: 'text-red-600' },
+                                                                                                                                warning: { bg: 'bg-amber-50', border: 'border-amber-200', icon: 'ph-warning', text: 'text-amber-700', iconColor: 'text-amber-600' },
+                                                                                                                                info: { bg: 'bg-blue-50', border: 'border-blue-200', icon: 'ph-info', text: 'text-blue-700', iconColor: 'text-blue-600' }
                                                                                                                             };
                                                                                                                             
                                                                                                                             list.innerHTML = this._notifications.map((n, idx) => {
                                                                                                                                 const cfg = typeConfig[n.type] || typeConfig.info;
                                                                                                                                 return `<div class="${cfg.bg} border ${cfg.border} rounded-xl px-4 py-3 flex items-start gap-3 hover:shadow-md transition group cursor-pointer" title="${n.fullTs}">
-                                                                                                                                    <i class="ph-bold ${cfg.icon} ${cfg.text} text-lg mt-0.5 flex-shrink-0"></i>
+                                                                                                                                    <i class="ph-bold ${cfg.icon} ${cfg.iconColor} text-lg mt-0.5 flex-shrink-0"></i>
                                                                                                                                     <div class="flex-1 min-w-0">
                                                                                                                                         <div class="font-semibold text-slate-700 text-sm line-clamp-2">${n.msg}</div>
                                                                                                                                         <div class="text-xs ${cfg.text} opacity-70 mt-1">${n.ts}</div>
@@ -1108,12 +1108,12 @@
                                                                                                     const tray = document.getElementById('notificationTray');
                                                                                                     if (!tray) return;
                                                                                                     
-                                                                                                    // Color mapping
+                                                                                                    // Color mapping - solid colors for tray
                                                                                                     const colors = {
-                                                                                                        success: 'bg-green-500',
-                                                                                                        error: 'bg-red-500',
-                                                                                                        warning: 'bg-amber-500',
-                                                                                                        info: 'bg-blue-500'
+                                                                                                        success: 'bg-green-600',
+                                                                                                        error: 'bg-red-600',
+                                                                                                        warning: 'bg-amber-600',
+                                                                                                        info: 'bg-blue-600'
                                                                                                     };
                                                                                                     
                                                                                                     // Icon mapping
@@ -1127,9 +1127,15 @@
                                                                                                     const bgColor = colors[type] || colors.info;
                                                                                                     const icon = icons[type] || icons.info;
                                                                                                     
-                                                                                                    // Update tray appearance
-                                                                                                    tray.className = `fixed top-3 left-1/2 -translate-x-1/2 z-[100] ${bgColor} text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 text-sm font-semibold transition-all duration-300 opacity-100`;
-                                                                                                    document.getElementById('notificationMessage').innerHTML = `<i class="ph-bold ${icon}"></i> ${msg}`;
+                                                                                                    // Update tray appearance with better styling
+                                                                                                    tray.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[100] ${bgColor} text-white px-5 py-3.5 rounded-xl shadow-lg flex items-center gap-3 text-sm font-semibold transition-all duration-300 opacity-100 max-w-sm md:max-w-md`;
+                                                                                                    document.getElementById('notificationMessage').innerHTML = `${msg}`;
+                                                                                                    
+                                                                                                    // Update icon
+                                                                                                    const iconEl = tray.querySelector('i');
+                                                                                                    if (iconEl) {
+                                                                                                        iconEl.className = `ph-bold ${icon} text-lg flex-shrink-0`;
+                                                                                                    }
                                                                                                     
                                                                                                     if (this._notifTimeout) clearTimeout(this._notifTimeout);
                                                                                                     this._notifTimeout = setTimeout(() => {
