@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>The Binary Fool</title>
+    <style>
+        :root {
+            /* FIXED THEME: PAPER */
+            --bg-color: #ffffff;
+            --bit-on: #000000;
+            --bit-off: #e0e0e0;
+            --overlay-color: rgba(0, 0, 0, 0.8);
+            --title-bg: rgba(255, 255, 255, 0.9);
+            --title-border: #000000;
+            --glow: none;
+            /* Paper Theme Glitch Colors */
+            --glitch-1: #ff00ff;
+            --glitch-2: #00ffff;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            transition: background-color 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            touch-action: none; 
+            cursor: crosshair; 
+        }
+
+        /* CRT Vignette (Dark Corners) */
+        .vignette {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(0,0,0,0) 60%, rgba(0,0,0,0.1) 100%);
+            pointer-events: none;
+            z-index: 21; /* Above scanlines */
+        }
+
+        /* CRT Scanline Overlay */
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0,0,0,0.05) 50%,
+                rgba(0,0,0,0.05)
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 20;
+            opacity: 0.6;
+        }
+
+        /* 3D Wrapper for the Tilt Effect */
+        #tilt-wrapper {
+            transform-style: preserve-3d;
+            perspective: 1000px;
+            will-change: transform;
+        }
+
+        #ascii-container {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 8px; 
+            line-height: 8px; 
+            white-space: pre; 
+            text-align: center;
+            user-select: none;
+            transform-origin: center center;
+            will-change: transform;
+            /* Allow glitch transform */
+            position: relative;
+        }
+
+        /* ANIMATION DEFINITION: Data Flux */
+        @keyframes flux {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* ANIMATION DEFINITION: The Glitch */
+        @keyframes glitch-anim {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+
+        /* Glitch Class (Applied via JS) */
+        .glitch-active #ascii-container {
+            animation: glitch-anim 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite;
+            /* Chromatic Aberration */
+            text-shadow: 2px 0 var(--glitch-1), -2px 0 var(--glitch-2);
+            filter: contrast(200%);
+        }
+
+        /* The "1"s (The Image) */
+        .bit-on {
+            display: inline-block; 
+            color: var(--bit-on);
+            font-weight: 900;
+            text-shadow: var(--glow);
+            transition: transform 0.1s, color 0.3s; 
+            animation: flux 3s infinite ease-in-out;
+        }
+
+        /* The "0"s (The Background) */
+        .bit-off {
+            display: inline-block; 
+            color: var(--bit-off);
+            font-weight: 100;
+            transition: transform 0.1s, color 0.3s;
+        }
+
+        /* INTERACTIVITY: MAGNIFICATION EFFECT */
+        .bit-on:hover, .bit-off:hover {
+            transform: scale(2.5) translateZ(20px); /* Pop out in 3D */
+            z-index: 10; 
+            position: relative;
+            background-color: var(--bg-color); 
+            box-shadow: 0 0 5px var(--overlay-color); 
+            font-weight: 900;
+            color: var(--bit-on);
+            animation-play-state: paused;
+        }
+
+        .title-overlay {
+            position: absolute;
+            bottom: 5%;
+            width: 100%;
+            text-align: center;
+            font-family: 'Courier New', Courier, monospace;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: 3rem;
+            text-transform: uppercase;
+            font-weight: 900;
+            letter-spacing: 0.5rem;
+            margin: 0;
+            color: var(--bit-on);
+            background: var(--title-bg);
+            padding: 0.5rem 1rem;
+            display: inline-block;
+            border: 2px solid var(--title-border);
+            box-shadow: 4px 4px 0px var(--overlay-color); 
+            transition: all 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.5rem; 
+                letter-spacing: 0.2rem;
+                border-width: 1px;
+            }
+            .title-overlay { bottom: 8%; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- CRT Overlay Layers -->
+    <div class="vignette"></div>
+    <div class="scanlines"></div>
+
+    <canvas id="processor" style="display:none;"></canvas>
+
+    <!-- 3D Tilt Wrapper -->
+    <!-- Accessibility Fix: Added role and label to wrapper -->
+    <div id="tilt-wrapper" role="img" aria-label="ASCII art representation of The Fool tarot card">
+        <!-- Accessibility Fix: Hidden from screen readers to prevent spam reading of 1s and 0s -->
+        <div id="ascii-container" aria-hidden="true">Initializing Neural Link...</div>
+    </div>
+
+    <div class="title-overlay">
+        <h1>The Fool</h1>
+    </div>
+
+    <script>
+        const imagePath = 'thefool.png'; 
+        
+        // Dynamic resolution based on device
+        const isMobile = window.innerWidth < 768;
+        const widthResolution = isMobile ? 85 : 150; 
+
+        const canvas = document.getElementById('processor');
+        const ctx = canvas.getContext('2d');
+        const output = document.getElementById('ascii-container');
+
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.src = imagePath;
+
+        img.onload = () => { renderAscii(); };
+        img.onerror = () => { output.innerText = "Error: Input signal lost."; };
+
+        function renderAscii() {
+            const aspectRatio = img.height / img.width;
+            const fontAspectRatio = 0.6; 
+            const heightResolution = Math.floor(widthResolution * aspectRatio * fontAspectRatio);
+
+            canvas.width = widthResolution;
+            canvas.height = heightResolution;
+
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, widthResolution, heightResolution);
+            
+            // TRI FIX: Signal Boost.
+            ctx.filter = 'contrast(250%) grayscale(100%)';
+            ctx.drawImage(img, 0, 0, widthResolution, heightResolution);
+            ctx.filter = 'none'; 
+
+            const data = ctx.getImageData(0, 0, widthResolution, heightResolution).data;
+            let asciiBuffer = [];
+
+            for (let y = 0; y < heightResolution; y++) {
+                for (let x = 0; x < widthResolution; x++) {
+                    const offset = (y * widthResolution + x) * 4;
+                    const brightness = (data[offset] * 0.299 + data[offset + 1] * 0.587 + data[offset + 2] * 0.114);
+
+                    // Random animation delay to create "shimmer" effect
+                    const delay = (Math.random() * 5).toFixed(2);
+                    const style = `style="animation-delay: ${delay}s"`;
+
+                    if (brightness < 240) {
+                        asciiBuffer.push(`<span class="bit-on" ${style}>1</span>`);
+                    } else {
+                        asciiBuffer.push('<span class="bit-off">0</span>');
+                    }
+                }
+                asciiBuffer.push("<br>");
+            }
+
+            output.innerHTML = asciiBuffer.join('');
+            fitToScreen();
+        }
+
+        function fitToScreen() {
+            const container = document.getElementById('ascii-container');
+            if (!container) return;
+            container.style.transform = 'none';
+            const contentWidth = container.offsetWidth;
+            const contentHeight = container.offsetHeight;
+            const availableWidth = window.innerWidth * 0.9;
+            const availableHeight = window.innerHeight * 0.8; 
+            const scale = Math.min(availableWidth / contentWidth, availableHeight / contentHeight);
+            
+            // Note: Scale is applied here, Rotation is applied to the wrapper
+            container.style.transform = `scale(${scale})`;
+        }
+
+        window.addEventListener('resize', () => { requestAnimationFrame(fitToScreen); });
+        window.addEventListener('orientationchange', () => { setTimeout(fitToScreen, 100); });
+
+        // --- 3D TILT LOGIC (OPTIMIZED) ---
+        let mouseX = 0;
+        let mouseY = 0;
+        let isTiltUpdatePending = false;
+
+        document.addEventListener('mousemove', (e) => {
+            // Calculate mouse position as a percentage (-1 to 1)
+            mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+            mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+            
+            if (!isTiltUpdatePending) {
+                requestAnimationFrame(updateTilt);
+                isTiltUpdatePending = true;
+            }
+        });
+
+        function updateTilt() {
+            // Max rotation degrees
+            const maxRot = 5;
+
+            const rotateY = mouseX * maxRot; 
+            const rotateX = -mouseY * maxRot;
+
+            const wrapper = document.getElementById('tilt-wrapper');
+            // Apply 3D rotation to the wrapper
+            if (wrapper) {
+                wrapper.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+            }
+            isTiltUpdatePending = false;
+        }
+
+        // --- GLITCH PROTOCOL ---
+        function triggerGlitch() {
+            document.body.classList.add('glitch-active');
+            
+            setTimeout(() => {
+                document.body.classList.remove('glitch-active');
+            }, 200);
+
+            scheduleNextGlitch();
+        }
+
+        function scheduleNextGlitch() {
+            const randomTime = Math.random() * 7000 + 3000; 
+            setTimeout(() => {
+                if(!document.hidden) {
+                    triggerGlitch();
+                } else {
+                    scheduleNextGlitch();
+                }
+            }, randomTime);
+        }
+
+        scheduleNextGlitch();
+
+    </script>
+</body>
+</html>
