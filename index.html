@@ -110,7 +110,7 @@
 <body class="bg-slate-50 text-slate-800 h-[100dvh] w-full flex flex-col overflow-hidden">
 
     <!-- NOTIFICATION TRAY -->
-    <div id="notificationTray" class="fixed top-2 left-2 right-2 sm:top-4 sm:left-1/2 sm:-translate-x-1/2 z-[100] bg-blue-600 text-white px-4 sm:px-5 py-3 sm:py-3.5 rounded-lg sm:rounded-xl shadow-xl flex items-center gap-3 text-sm sm:text-sm font-semibold transition-all duration-300 opacity-0 pointer-events-none sm:max-w-sm md:max-w-md">
+    <div id="notificationTray" class="fixed z-[100] bg-blue-600 text-white px-4 sm:px-5 py-3 sm:py-3.5 rounded-lg sm:rounded-xl shadow-xl flex items-center gap-3 text-sm sm:text-sm font-semibold transition-all duration-300 opacity-0 pointer-events-none sm:max-w-sm md:max-w-md bottom-20 left-2 right-2 sm:bottom-auto sm:left-1/2 sm:-translate-x-1/2 sm:top-4">
         <i class="ph-bold ph-info text-lg sm:text-lg flex-shrink-0"></i>
         <span id="notificationMessage" class="flex-1 text-white break-words line-clamp-3 sm:line-clamp-none">You have a new lead assigned!</span>
         <button onclick="event.stopPropagation(); ui.hideNotification()" class="ml-auto text-white/70 hover:text-white active:text-white transition flex-shrink-0 p-2 sm:p-1.5 hover:bg-white/10 rounded-md touch-none cursor-pointer" aria-label="Close notification" type="button"><i class="ph-bold ph-x text-lg"></i></button>
@@ -1190,8 +1190,8 @@
                                                                                                     const bgColor = colors[type] || colors.info;
                                                                                                     const icon = icons[type] || icons.info;
                                                                                                     
-                                                                                                    // Mobile-optimized styling with responsive padding and sizing
-                                                                                                    tray.className = `fixed top-2 left-2 right-2 sm:top-4 sm:left-1/2 sm:-translate-x-1/2 z-[100] ${bgColor} text-white px-4 sm:px-5 py-3 sm:py-3.5 rounded-lg sm:rounded-xl shadow-xl flex items-center gap-3 text-sm font-semibold transition-all duration-300 opacity-100 pointer-events-auto sm:max-w-sm md:max-w-md`;
+                                                                                                    // Mobile-optimized: bottom on mobile, top on desktop
+                                                                                                    tray.className = `fixed bottom-20 left-2 right-2 sm:bottom-auto sm:left-1/2 sm:-translate-x-1/2 sm:top-4 z-[100] ${bgColor} text-white px-4 sm:px-5 py-3 sm:py-3.5 rounded-lg sm:rounded-xl shadow-xl flex items-center gap-3 text-sm font-semibold transition-all duration-300 opacity-100 pointer-events-auto sm:max-w-sm md:max-w-md`;
                                                                                                     document.getElementById('notificationMessage').innerHTML = `${msg}`;
                                                                                                     
                                                                                                     // Update icon
