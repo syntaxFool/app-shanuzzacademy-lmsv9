@@ -2804,6 +2804,9 @@
                     leads = leads.filter(lead => lead.assignedTo === selectedAgent);
                 }
                 
+                // Exclude Won and Lost leads from follow-ups
+                leads = leads.filter(lead => lead.status !== 'Won' && lead.status !== 'Lost');
+                
                 leads.forEach(l => {
                     const f = l.activities?.find(a => a.type==='follow_up');
                     if(f && f.note) {
