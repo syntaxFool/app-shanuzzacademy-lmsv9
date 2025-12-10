@@ -261,6 +261,14 @@
                                     <option value="">All Agents</option>
                                 </select>
                             </div>
+                            <!-- No Action Filter -->
+                            <div>
+                                <label class="text-xs font-semibold text-slate-600 block mb-2">Options</label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="filterNoAction" onchange="app.applyFilters()" class="w-4 h-4 rounded border-slate-300 cursor-pointer">
+                                    <span class="text-sm text-slate-700">Show only No Action leads</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
                     <!-- Bulk Actions Bar -->
@@ -1283,7 +1291,7 @@
                                                         return `
                                                         <tr class="table-row-hover ${showTaskWarning ? 'bg-red-50' : 'hover:bg-slate-50'} active:bg-slate-100 transition">
                                                             <td class="pl-3 sm:pl-4 py-2 sm:py-3"><input type="checkbox" class="leadCheckbox w-4 h-4 rounded" data-leadId="${lead.id}" onchange="app.updateBulkActionsBar()"></td>
-                                                            <td class="pl-3 sm:pl-4 py-2 sm:py-3 font-bold text-slate-800"><span class="inline-flex items-center gap-1.5">${this.escapeHtml(lead.name)}${showTaskWarning ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 flex-shrink-0" title="Active lead with no pending task"><i class="ph-bold ph-warning text-sm"></i> <span class="hidden sm:inline">No Action</span></span>` : ''}</span></td>
+                                                            <td class="pl-3 sm:pl-4 py-2 sm:py-3 font-bold text-slate-800"><span class="inline-flex items-center gap-1.5">${this.escapeHtml(lead.name || lead.phone)}${showTaskWarning ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 flex-shrink-0" title="Active lead with no pending task"><i class="ph-bold ph-warning text-sm"></i> <span class="hidden sm:inline">No Action</span></span>` : ''}</span></td>
                                                             <td class="px-2 sm:px-3 py-2 sm:py-3 hidden sm:table-cell text-slate-600"><div class="text-xs">${this.escapeHtml(lead.phone || '-')}</div><div class="text-xs text-slate-400 line-clamp-1">${this.escapeHtml(lead.email || '')}</div></td>
                                                             <td class="px-2 sm:px-3 py-2 sm:py-3"><span class="inline-block px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded font-medium whitespace-nowrap">${this.escapeHtml(lead.status)}</span></td>
                                                             <td class="px-2 sm:px-3 py-2 sm:py-3 hidden md:table-cell">${lead.status === 'Lost' && lead.lostReason ? `<span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded font-medium">${this.escapeHtml(lead.lostReason)}</span>` : '-'}</td>
@@ -1364,10 +1372,12 @@
                                                     const searchInput = document.getElementById('filterSearch');
                                                     const statusSelect = document.getElementById('filterStatus');
                                                     const assignedSelect = document.getElementById('filterAssignedTo');
+                                                    const noActionCheckbox = document.getElementById('filterNoAction');
                                                     
                                                     if (searchInput) this.filters.search = searchInput.value.toLowerCase().trim();
                                                     if (statusSelect) this.filters.status = statusSelect.value;
                                                     if (assignedSelect) this.filters.assignedTo = assignedSelect.value;
+                                                    if (noActionCheckbox) this.filters.noAction = noActionCheckbox.checked;
                                                     
                                                     // Re-render with filtered and sorted data
                                                     this.render(this.store.state);
@@ -1378,17 +1388,20 @@
                                                     this.filters = {
                                                         search: '',
                                                         status: '',
-                                                        assignedTo: ''
+                                                        assignedTo: '',
+                                                        noAction: false
                                                     };
                                                     
                                                     // Reset UI
                                                     const searchInput = document.getElementById('filterSearch');
                                                     const statusSelect = document.getElementById('filterStatus');
                                                     const assignedSelect = document.getElementById('filterAssignedTo');
+                                                    const noActionCheckbox = document.getElementById('filterNoAction');
                                                     
                                                     if (searchInput) searchInput.value = '';
                                                     if (statusSelect) statusSelect.value = '';
                                                     if (assignedSelect) assignedSelect.value = '';
+                                                    if (noActionCheckbox) noActionCheckbox.checked = false;
                                                     
                                                     // Re-render
                                                     this.render(this.store.state);
@@ -1416,6 +1429,15 @@
                                                     // Apply assigned-to filter
                                                     if (this.filters.assignedTo) {
                                                         filtered = filtered.filter(lead => lead.assignedTo === this.filters.assignedTo);
+                                                    }
+                                                    
+                                                    // Apply "No Action" filter - shows only leads with no pending tasks on active stages
+                                                    if (this.filters.noAction) {
+                                                        filtered = filtered.filter(lead => {
+                                                            const isActiveStage = !['Won', 'Lost'].includes(lead.status);
+                                                            const hasPendingTask = lead.tasks && lead.tasks.some(t => t.status === 'pending');
+                                                            return isActiveStage && !hasPendingTask;
+                                                        });
                                                     }
                                                     
                                                     return filtered;
@@ -1775,7 +1797,8 @@
                 this.filters = {
                     search: '',
                     status: '',
-                    assignedTo: ''
+                    assignedTo: '',
+                    noAction: false
                 };
                 // Always update login card/app title on construction
                 if (typeof this.applyConfig === 'function') this.applyConfig();
@@ -2673,9 +2696,9 @@
                     `<div class="flex flex-wrap gap-1 mb-2">${interests.slice(0, 2).map(i => `<span class="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">${this.escapeHtml(i)}</span>`).join('')}${interests.length > 2 ? `<span class="text-[10px] text-slate-400">+${interests.length - 2}</span>` : ''}</div>` : '';
 
                 return `
-                    <div onclick="app.editLead('${lead.id}')" class="bg-white p-4 rounded-xl shadow-sm border ${showTaskWarning ? 'border-red-300 bg-red-50/30' : 'border-slate-100'} active:scale-[0.99] transition-transform cursor-pointer ${lead.status === 'Lost' ? 'grayscale opacity-60' : ''}">
-                            <div class="flex justify-between items-start mb-2">
-                                <h3 class="font-bold text-slate-800 line-clamp-1 text-lg">${this.escapeHtml(lead.name)}</h3>
+                    <div onclick="app.editLead('${lead.id}')" class="bg-white p-4 md:p-5 rounded-xl shadow-sm border ${showTaskWarning ? 'border-red-300 bg-red-50/30' : 'border-slate-100'} active:scale-[0.99] transition-transform cursor-pointer ${lead.status === 'Lost' ? 'grayscale opacity-60' : ''}">
+                            <div class="flex justify-between items-start mb-3 md:mb-3">
+                                <h3 class="font-bold text-slate-800 line-clamp-1 text-lg md:text-base">${this.escapeHtml(lead.name || lead.phone)}</h3>
                                 <div class="flex gap-1 -mr-2 -mt-2">${showTaskWarning ? `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 whitespace-nowrap"><i class="ph-bold ph-warning"></i> No Action</span>` : ''}${delBtn}</div>
                             </div>
                             ${lead.assignedTo ? `<div class="text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded mb-2 w-fit">${this.escapeHtml(this.getUserName(lead.assignedTo))}</div>` : ''}
@@ -2870,7 +2893,11 @@
             deleteTask(leadId, taskIndex) {
                 const lead = this.store.state.find(l => l.id === leadId);
                 if(lead && lead.tasks) {
+                    const deletedTask = lead.tasks[taskIndex];
+                    const taskTitle = deletedTask ? deletedTask.title : 'Unknown Task';
                     lead.tasks.splice(taskIndex, 1);
+                    // Log activity when task is deleted
+                    this.store.addActivity(leadId, { type: 'task', note: `Task deleted: ${taskTitle}` }, this.currentUser);
                     this.store.save();
                     this.renderTaskView(lead);
                 }
