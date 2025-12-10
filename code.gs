@@ -1,13 +1,23 @@
-function doGet() {
+function doGet(e) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   setupSheets(ss);
   
-  const leads = readSheet(ss.getSheetByName('Leads'));
+  let leads = readSheet(ss.getSheetByName('Leads'));
   const activities = readSheet(ss.getSheetByName('Activities'));
   const tasks = readSheet(ss.getSheetByName('Tasks'));
   const users = readSheet(ss.getSheetByName('Users'));
   const logs = readSheet(ss.getSheetByName('Logs'));
   const interests = readSheet(ss.getSheetByName('Interests'));
+  
+  // Support differential sync: if lastSyncTime is provided, only return changed leads
+  const lastSyncTime = e && e.parameter && e.parameter.lastSyncTime ? parseInt(e.parameter.lastSyncTime) : 0;
+  if (lastSyncTime > 0) {
+    leads = leads.filter(lead => {
+      if (!lead.updatedAt) return false; // Skip leads without updatedAt (shouldn't happen)
+      const leadUpdateTime = new Date(lead.updatedAt).getTime();
+      return leadUpdateTime > lastSyncTime;
+    });
+  }
   
   // Read Settings Sheet with dynamic column detection
   const settingsSheet = ss.getSheetByName('Settings');
@@ -116,7 +126,7 @@ function doPost(e) {
           }
         });
 
-        writeSheet(ss.getSheetByName('Leads'), flatLeads, ['id', 'name', 'phone', 'email', 'status', 'value', 'interest', 'location', 'source', 'assignedTo', 'notes', 'temperature', 'lostReason', 'createdAt']);
+        writeSheet(ss.getSheetByName('Leads'), flatLeads, ['id', 'name', 'phone', 'email', 'status', 'value', 'interest', 'location', 'source', 'assignedTo', 'notes', 'temperature', 'lostReason', 'createdAt', 'updatedAt']);
         writeSheet(ss.getSheetByName('Activities'), flatActivities, ['id', 'leadId', 'type', 'note', 'timestamp', 'createdBy', 'role']);
         writeSheet(ss.getSheetByName('Tasks'), flatTasks, ['id', 'leadId', 'title', 'status', 'dueDate', 'note', 'createdAt', 'completedAt']);
       }

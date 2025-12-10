@@ -737,7 +737,13 @@
                 if (!this.config.dbUrl) return;
                 ui.showLoading(true);
                 try {
-                    const response = await fetch(this.config.dbUrl, { 
+                    // Support differential sync: pass lastSyncTime to get only changed leads
+                    const lastSyncTime = this.lastSyncTime || 0;
+                    const url = lastSyncTime > 0 
+                        ? `${this.config.dbUrl}?lastSyncTime=${lastSyncTime}`
+                        : this.config.dbUrl;
+                    
+                    const response = await fetch(url, { 
                         method: 'GET', 
                         redirect: 'follow', 
                         mode: 'cors',
@@ -745,7 +751,25 @@
                     });
                     if (!response.ok) throw new Error('Network response was not ok');
                     const cloudData = await response.json();
-                    if (cloudData.leads) this.state = cloudData.leads;
+                    
+                    // Differential sync: merge received leads instead of replacing entire state
+                    if (cloudData.leads && cloudData.leads.length > 0) {
+                        if (lastSyncTime > 0) {
+                            // Merge: update or add only the received leads
+                            cloudData.leads.forEach(remoteLead => {
+                                const existingIdx = this.state.findIndex(l => l.id === remoteLead.id);
+                                if (existingIdx !== -1) {
+                                    this.state[existingIdx] = remoteLead;
+                                } else {
+                                    this.state.push(remoteLead);
+                                }
+                            });
+                        } else {
+                            // Full sync: replace entire state (first sync)
+                            this.state = cloudData.leads;
+                        }
+                    }
+                    
                     if (cloudData.users && cloudData.users.length > 0) this.users = cloudData.users;
                     if (cloudData.logs) this.logs = cloudData.logs;
                     if (cloudData.interests) this.interests = cloudData.interests;
@@ -756,6 +780,7 @@
                     if (cloudData.config && cloudData.config.appTitle) this.config.appTitle = cloudData.config.appTitle;
                     // Capture server time for real-time sync
                     if (cloudData.serverTime) {
+                        this.lastSyncTime = cloudData.serverTime; // Store for next differential sync
                         if (window.app) window.app.lastSyncTime = cloudData.serverTime;
                         if (window.app) window.app.lastServerUpdate = cloudData.lastUpdate || 0;
                     }
@@ -803,7 +828,8 @@
             }
             log(msg, user) { const prefix = user ? `${user.name} (${user.role}): ` : 'System: '; this.logs.unshift({ id: this.generateId(), timestamp: new Date().toISOString(), message: prefix + msg }); if (this.logs.length > 50) this.logs.pop(); this.save(); }
             add(data, user) {
-                const newLead = { id: this.generateId(), createdAt: new Date().toISOString(), activities: [], ...data };
+                const now = new Date().toISOString();
+                const newLead = { id: this.generateId(), createdAt: now, updatedAt: now, activities: [], ...data };
                 this.state.push(newLead);
                 this.log(`Created lead ${data.name}`, user);
                 
@@ -827,7 +853,7 @@
                 const idx = this.state.findIndex(l => l.id === id);
                 if (idx !== -1) {
                     const oldLead = this.state[idx];
-                    this.state[idx] = { ...this.state[idx], ...data };
+                    this.state[idx] = { ...this.state[idx], ...data, updatedAt: new Date().toISOString() };
                     this.log(`Updated ${data.name}`, user);
                     
                     // Log activity if assignment changed
@@ -861,6 +887,7 @@
                 const l = this.state.find(x => x.id === id);
                 if (l) {
                     l.status = status;
+                    l.updatedAt = new Date().toISOString();
                     this.log(`Moved ${l.name} to ${status}`, user);
                     this.save();
                     if(window.app && typeof window.app.renderLeaderboard==='function'){window.app.renderLeaderboard();}
@@ -871,6 +898,7 @@
                 if (l) {
                     if(!l.activities) l.activities = [];
                     l.activities.unshift({ id: this.generateId(), timestamp: new Date().toISOString(), createdBy: user ? user.name : 'System', role: user ? user.role : '', ...activity });
+                    l.updatedAt = new Date().toISOString();
                     this.log(`Logged activity for ${l.name}`, user);
                     this.save();
                     if(window.app && typeof window.app.renderLeaderboard==='function'){window.app.renderLeaderboard();}
@@ -1111,30 +1139,42 @@
                         
                         // Check if user is currently editing (modal is open)
                         const isModalOpen = document.getElementById('leadModal') && document.getElementById('leadModal').classList.contains('open');
+                        const currentEditingLeadId = isModalOpen ? document.getElementById('leadModal').dataset.leadId : null;
                         
-                        if (isModalOpen) {
-                            // Don't interrupt, just notify
-                            this.notify('New data available. Please save and refresh.', 'info');
-                        } else {
-                            // Safe to auto-refresh
-                            console.log('Auto-refreshing data from server...');
-                            await this.store.syncWithCloud();
+                        // Always sync in background (Soft Sync) - don't wait for modal to close
+                        console.log('Auto-refreshing data from server...');
+                        await this.store.syncWithCloud();
+                        
+                        // Detect changes
+                        const changes = this.detectChanges(previousLeads, this.store.state);
+                        
+                        if (changes.length > 0) {
+                            // Check if currently editing lead was modified by someone else
+                            const editingLeadChanged = currentEditingLeadId && changes.some(c => c.leadId === currentEditingLeadId);
                             
-                            // Detect changes
-                            const changes = this.detectChanges(previousLeads, this.store.state);
-                            
-                            if (changes.length > 0) {
-                                // Show detailed notification for first change (most recent)
+                            if (editingLeadChanged) {
+                                // Interrupt only if user's current lead was modified
+                                const message = this.formatChangeMessage(changes.find(c => c.leadId === currentEditingLeadId));
+                                this.notify(`Lead being edited was updated: ${message}. Refresh to see changes.`, 'warning');
+                            } else if (isModalOpen) {
+                                // Other leads changed - show updates available badge but don't interrupt
+                                this.notify(`${changes.length} lead${changes.length > 1 ? 's' : ''} updated. Refresh when ready.`, 'info');
+                            } else {
+                                // Modal not open - show detailed message and refresh UI
                                 const message = this.formatChangeMessage(changes[0]);
                                 if (message) {
                                     this.notify(message, 'info');
                                 }
-                            } else {
-                                this.notify('Data updated from other users', 'success');
+                                this.render(this.store.state);
                             }
-                            
-                            this.render(this.store.state);
+                        } else {
+                            // No specific changes detected, but data was updated
+                            if (!isModalOpen) {
+                                this.notify('Data updated from other users', 'success');
+                                this.render(this.store.state);
+                            }
                         }
+                        
                         // Update local tracking
                         this.lastServerUpdate = data.lastUpdate;
                     }
@@ -1800,6 +1840,8 @@
             editLead(id, tab) {
                 const lead = this.store.state.find(l => l.id === id);
                 if (!lead) return;
+                // Store current editing lead ID for soft sync detection
+                document.getElementById('leadModal').dataset.leadId = id;
                 // Fill modal form fields
                 document.getElementById('leadIdInput').value = lead.id;
                 document.getElementById('modalTitle').textContent = 'Edit Lead';
@@ -3095,7 +3137,7 @@
                     }
                 } else { 
                     m.classList.remove('open'); 
-                    setTimeout(()=>{m.classList.add('hidden'); document.getElementById('leadForm').reset(); document.getElementById('leadIdInput').value='';},300); 
+                    setTimeout(()=>{m.classList.add('hidden'); document.getElementById('leadForm').reset(); document.getElementById('leadIdInput').value=''; m.dataset.leadId = '';},300); 
                 } 
             },
             initModalSwipeClose: (modal) => {
