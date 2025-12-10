@@ -2797,13 +2797,7 @@
             }
 
             renderFollowUps() {
-                // Use local date (YYYY-MM-DD) to avoid timezone issues
-                const today = new Date();
-                const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-                
-                const futureDate = new Date(today);
-                futureDate.setDate(futureDate.getDate() + 7);
-                const sevenDaysFromNow = futureDate.getFullYear() + '-' + String(futureDate.getMonth() + 1).padStart(2, '0') + '-' + String(futureDate.getDate()).padStart(2, '0');
+                const today = new Date().toISOString().split('T')[0];
                 let od=[], td=[], uc=[];
                 
                 // Get selected agent filter
@@ -2850,11 +2844,7 @@
                     const f = l.activities?.find(a => a.type==='follow_up');
                     if(f && f.note) {
                         const d = { ...l, followUpDate: f.note };
-                        // Extract date part only (handles both YYYY-MM-DD and ISO datetime formats)
-                        const dateStr = f.note.substring(0, 10);
-                        if(dateStr < todayStr) od.push(d); 
-                        else if(dateStr === todayStr) td.push(d); 
-                        else if(dateStr <= sevenDaysFromNow) uc.push(d);
+                        if(f.note < today) od.push(d); else if(f.note === today) td.push(d); else uc.push(d);
                     }
                 });
                 const ri = (l) => `<button onclick="app.openLeadFromMenu('${l.id}')" class="w-full text-left px-4 py-3 hover:bg-slate-50 flex justify-between items-center group"><div><div class="font-bold text-slate-700 text-sm group-hover:text-primary">${this.escapeHtml(l.name)}</div><div class="text-xs text-slate-400 mt-0.5">${this.formatDate(l.followUpDate)}</div></div><i class="ph-bold ph-caret-right text-slate-300"></i></button>`;
