@@ -261,13 +261,19 @@
                                     <option value="">All Agents</option>
                                 </select>
                             </div>
-                            <!-- No Action Filter -->
+                            <!-- Task Filters -->
                             <div>
-                                <label class="text-xs font-semibold text-slate-600 block mb-2">Options</label>
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" id="filterNoAction" onchange="app.applyFilters()" class="w-4 h-4 rounded border-slate-300 cursor-pointer">
-                                    <span class="text-sm text-slate-700">Show only No Action leads</span>
-                                </label>
+                                <label class="text-xs font-semibold text-slate-600 block mb-2">Task Filters</label>
+                                <div class="flex flex-col gap-1">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" id="filterNoTask" onchange="app.applyFilters()" class="w-4 h-4 rounded border-slate-300 cursor-pointer">
+                                        <span class="text-sm text-slate-700">No Task (Pending)</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" id="filterNoAction" onchange="app.applyFilters()" class="w-4 h-4 rounded border-slate-300 cursor-pointer">
+                                        <span class="text-sm text-slate-700">No Action (Empty)</span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1284,14 +1290,25 @@
                                                         }
                                                     }
                                                     tbody.innerHTML = filteredLeads.map(lead => {
-                                                        // Check for missing pending task on active leads
+                                                        // Check for task status
                                                         const isActiveStage = !['Won', 'Lost'].includes(lead.status);
+                                                        const taskCount = lead.tasks ? lead.tasks.length : 0;
                                                         const hasPendingTask = lead.tasks && lead.tasks.some(t => t.status === 'pending');
-                                                        const showTaskWarning = isActiveStage && !hasPendingTask;
+                                                        
+                                                        const isNoAction = isActiveStage && taskCount === 0;
+                                                        const isNoTask = isActiveStage && taskCount > 0 && !hasPendingTask;
+                                                        
+                                                        let badge = '';
+                                                        if (isNoAction) {
+                                                            badge = `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 flex-shrink-0" title="Active lead with 0 tasks"><i class="ph-bold ph-warning-circle text-sm"></i> <span class="hidden sm:inline">No Action</span></span>`;
+                                                        } else if (isNoTask) {
+                                                            badge = `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-700 flex-shrink-0" title="Active lead with no pending task"><i class="ph-bold ph-warning text-sm"></i> <span class="hidden sm:inline">No Task</span></span>`;
+                                                        }
+
                                                         return `
-                                                        <tr class="table-row-hover ${showTaskWarning ? 'bg-red-50' : 'hover:bg-slate-50'} active:bg-slate-100 transition">
+                                                        <tr class="table-row-hover ${isNoAction ? 'bg-red-50' : isNoTask ? 'bg-amber-50' : 'hover:bg-slate-50'} active:bg-slate-100 transition">
                                                             <td class="pl-3 sm:pl-4 py-2 sm:py-3"><input type="checkbox" class="leadCheckbox w-4 h-4 rounded" data-leadId="${lead.id}" onchange="app.updateBulkActionsBar()"></td>
-                                                            <td class="pl-3 sm:pl-4 py-2 sm:py-3 font-bold text-slate-800"><span class="inline-flex items-center gap-1.5">${this.escapeHtml(lead.name || lead.phone)}${showTaskWarning ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 flex-shrink-0" title="Active lead with no pending task"><i class="ph-bold ph-warning text-sm"></i> <span class="hidden sm:inline">No Action</span></span>` : ''}</span></td>
+                                                            <td class="pl-3 sm:pl-4 py-2 sm:py-3 font-bold text-slate-800"><span class="inline-flex items-center gap-1.5">${this.escapeHtml(lead.name || lead.phone)}${badge}</span></td>
                                                             <td class="px-2 sm:px-3 py-2 sm:py-3 hidden sm:table-cell text-slate-600"><div class="text-xs">${this.escapeHtml(lead.phone || '-')}</div><div class="text-xs text-slate-400 line-clamp-1">${this.escapeHtml(lead.email || '')}</div></td>
                                                             <td class="px-2 sm:px-3 py-2 sm:py-3"><span class="inline-block px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded font-medium whitespace-nowrap">${this.escapeHtml(lead.status)}</span></td>
                                                             <td class="px-2 sm:px-3 py-2 sm:py-3 hidden md:table-cell">${lead.status === 'Lost' && lead.lostReason ? `<span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded font-medium">${this.escapeHtml(lead.lostReason)}</span>` : '-'}</td>
@@ -1372,11 +1389,13 @@
                                                     const searchInput = document.getElementById('filterSearch');
                                                     const statusSelect = document.getElementById('filterStatus');
                                                     const assignedSelect = document.getElementById('filterAssignedTo');
+                                                    const noTaskCheckbox = document.getElementById('filterNoTask');
                                                     const noActionCheckbox = document.getElementById('filterNoAction');
                                                     
                                                     if (searchInput) this.filters.search = searchInput.value.toLowerCase().trim();
                                                     if (statusSelect) this.filters.status = statusSelect.value;
                                                     if (assignedSelect) this.filters.assignedTo = assignedSelect.value;
+                                                    if (noTaskCheckbox) this.filters.noTask = noTaskCheckbox.checked;
                                                     if (noActionCheckbox) this.filters.noAction = noActionCheckbox.checked;
                                                     
                                                     // Re-render with filtered and sorted data
@@ -1389,6 +1408,7 @@
                                                         search: '',
                                                         status: '',
                                                         assignedTo: '',
+                                                        noTask: false,
                                                         noAction: false
                                                     };
                                                     
@@ -1396,11 +1416,13 @@
                                                     const searchInput = document.getElementById('filterSearch');
                                                     const statusSelect = document.getElementById('filterStatus');
                                                     const assignedSelect = document.getElementById('filterAssignedTo');
+                                                    const noTaskCheckbox = document.getElementById('filterNoTask');
                                                     const noActionCheckbox = document.getElementById('filterNoAction');
                                                     
                                                     if (searchInput) searchInput.value = '';
                                                     if (statusSelect) statusSelect.value = '';
                                                     if (assignedSelect) assignedSelect.value = '';
+                                                    if (noTaskCheckbox) noTaskCheckbox.checked = false;
                                                     if (noActionCheckbox) noActionCheckbox.checked = false;
                                                     
                                                     // Re-render
@@ -1431,12 +1453,22 @@
                                                         filtered = filtered.filter(lead => lead.assignedTo === this.filters.assignedTo);
                                                     }
                                                     
-                                                    // Apply "No Action" filter - shows only leads with no pending tasks on active stages
+                                                    // Apply "No Task" filter - shows leads with tasks but none pending
+                                                    if (this.filters.noTask) {
+                                                        filtered = filtered.filter(lead => {
+                                                            const isActiveStage = !['Won', 'Lost'].includes(lead.status);
+                                                            const hasTasks = lead.tasks && lead.tasks.length > 0;
+                                                            const hasPendingTask = lead.tasks && lead.tasks.some(t => t.status === 'pending');
+                                                            return isActiveStage && hasTasks && !hasPendingTask;
+                                                        });
+                                                    }
+
+                                                    // Apply "No Action" filter - shows leads with 0 tasks
                                                     if (this.filters.noAction) {
                                                         filtered = filtered.filter(lead => {
                                                             const isActiveStage = !['Won', 'Lost'].includes(lead.status);
-                                                            const hasPendingTask = lead.tasks && lead.tasks.some(t => t.status === 'pending');
-                                                            return isActiveStage && !hasPendingTask;
+                                                            const hasTasks = lead.tasks && lead.tasks.length > 0;
+                                                            return isActiveStage && !hasTasks;
                                                         });
                                                     }
                                                     
@@ -1798,6 +1830,7 @@
                     search: '',
                     status: '',
                     assignedTo: '',
+                    noTask: false,
                     noAction: false
                 };
                 // Always update login card/app title on construction
@@ -2682,10 +2715,20 @@
                 const next = idx < this.statusConfig.length-1 ? this.statusConfig[idx+1].id : null;
                 const delBtn = (this.currentUser.role==='admin' || this.currentUser.role==='superuser') ? `<button onclick="event.stopPropagation(); app.deleteLead('${lead.id}')" class="text-slate-300 hover:text-red-500 p-2 rounded-full active:bg-red-50"><i class="ph-bold ph-trash"></i></button>` : '';
                 
-                // Check for missing pending task on active leads
+                // Check for task status
                 const isActiveStage = !['Won', 'Lost'].includes(lead.status);
+                const taskCount = lead.tasks ? lead.tasks.length : 0;
                 const hasPendingTask = lead.tasks && lead.tasks.some(t => t.status === 'pending');
-                const showTaskWarning = isActiveStage && !hasPendingTask;
+                
+                const isNoAction = isActiveStage && taskCount === 0;
+                const isNoTask = isActiveStage && taskCount > 0 && !hasPendingTask;
+                
+                let badge = '';
+                if (isNoAction) {
+                    badge = `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 whitespace-nowrap"><i class="ph-bold ph-warning-circle"></i> No Action</span>`;
+                } else if (isNoTask) {
+                    badge = `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 whitespace-nowrap"><i class="ph-bold ph-warning"></i> No Task</span>`;
+                }
                 
                 const rawPhone = lead.phone || '';
                 let displayPhone = rawPhone;
@@ -2696,10 +2739,10 @@
                     `<div class="flex flex-wrap gap-1 mb-2">${interests.slice(0, 2).map(i => `<span class="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">${this.escapeHtml(i)}</span>`).join('')}${interests.length > 2 ? `<span class="text-[10px] text-slate-400">+${interests.length - 2}</span>` : ''}</div>` : '';
 
                 return `
-                    <div onclick="app.editLead('${lead.id}')" class="bg-white p-4 md:p-5 rounded-xl shadow-sm border ${showTaskWarning ? 'border-red-300 bg-red-50/30' : 'border-slate-100'} active:scale-[0.99] transition-transform cursor-pointer ${lead.status === 'Lost' ? 'grayscale opacity-60' : ''}">
+                    <div onclick="app.editLead('${lead.id}')" class="bg-white p-4 md:p-5 rounded-xl shadow-sm border ${isNoAction ? 'border-red-300 bg-red-50/30' : isNoTask ? 'border-amber-300 bg-amber-50/30' : 'border-slate-100'} active:scale-[0.99] transition-transform cursor-pointer ${lead.status === 'Lost' ? 'grayscale opacity-60' : ''}">
                             <div class="flex justify-between items-start mb-3 md:mb-3">
                                 <h3 class="font-bold text-slate-800 line-clamp-1 text-lg md:text-base">${this.escapeHtml(lead.name || lead.phone)}</h3>
-                                <div class="flex gap-1 -mr-2 -mt-2">${showTaskWarning ? `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 whitespace-nowrap"><i class="ph-bold ph-warning"></i> No Action</span>` : ''}${delBtn}</div>
+                                <div class="flex gap-1 -mr-2 -mt-2">${badge}${delBtn}</div>
                             </div>
                             ${lead.assignedTo ? `<div class="text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded mb-2 w-fit">${this.escapeHtml(this.getUserName(lead.assignedTo))}</div>` : ''}
                             <div class="flex items-center gap-2 mb-2">
@@ -2709,7 +2752,7 @@
                             <div class="text-slate-500 font-medium text-sm mb-3">${this.formatCurrency(lead.value)}</div>
                             <div class="flex flex-wrap gap-2 mb-3">
                                 <button onclick="event.stopPropagation(); app.editLead('${lead.id}', 'activity')" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-50 text-indigo-600 text-xs rounded-lg border border-indigo-100 active:bg-indigo-100 font-medium transition-colors"><i class="ph-bold ph-chat"></i> Activity</button>
-                                <button onclick="event.stopPropagation(); app.editLead('${lead.id}', 'task')" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 ${showTaskWarning ? 'bg-red-100 text-red-600 border-red-200' : 'bg-amber-50 text-amber-600 border-amber-100'} text-xs rounded-lg border active:bg-opacity-75 font-medium transition-colors"><i class="ph-bold ph-plus"></i> Task</button>
+                                <button onclick="event.stopPropagation(); app.editLead('${lead.id}', 'task')" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 ${isNoAction ? 'bg-red-100 text-red-600 border-red-200' : isNoTask ? 'bg-amber-100 text-amber-600 border-amber-200' : 'bg-slate-50 text-slate-600 border-slate-200'} text-xs rounded-lg border active:bg-opacity-75 font-medium transition-colors"><i class="ph-bold ph-plus"></i> Task</button>
                                 ${lead.phone ? `<a href="tel:${lead.phone.replace(/\s+/g,'')}" onclick="event.stopPropagation()" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 text-slate-600 text-xs rounded-lg border border-slate-200 active:bg-slate-200"><i class="ph-fill ph-phone"></i> Call</a><a href="https://wa.me/${lead.phone.replace(/\D/g,'')}" target="_blank" onclick="event.stopPropagation()" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 text-slate-600 text-xs rounded-lg border border-slate-200 active:bg-slate-200 hover:text-green-600 hover:bg-green-50 hover:border-green-200 transition-colors"><i class="ph-fill ph-whatsapp-logo text-green-600"></i> WhatsApp</a>` : ''}
                             </div>
                             ${lead.notes ? `<div class="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg mb-3 line-clamp-2">${this.escapeHtml(lead.notes)}</div>` : ''}
