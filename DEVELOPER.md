@@ -28,11 +28,15 @@
 
 ## 3. Architecture & Data Flow
 
-### Recent Improvements (v9.1)
+### Recent Improvements (v9.2)
+- ✅ **Location & Source Fix**: Fixed form field access issue where location and source were showing blank (form.location shadowing)
+- ✅ **Date Standardization**: All dates now display in DD/MM/YYYY format globally (dates + times show DD/MM/YYYY HH:MM AM/PM)
+- ✅ **Activity Logging**: Automatic activity logging when leads are assigned to users (both new and existing)
+- ✅ **Follow-Up Logic**: Improved date separation (Overdue/Today/Upcoming with 7-day window), Won/Lost leads excluded
 - ✅ **Kanban Card Optimization**: Desktop-responsive sizing with md: breakpoints for better spacing
 - ✅ **Name Fallback Display**: Shows phone number if lead.name is missing (improves data quality visibility)
-- ✅ **No Action Filter**: New checkbox filter to show leads with no pending tasks on active stages
-- ✅ **Task/Activity Deletion**: Verified deletion logic maintains referential integrity
+- ✅ **Dual Task Filters**: "No Task" (amber) for leads with tasks but none pending, "No Action" (red) for 0 tasks
+- ✅ **syntaxfoolcard.html**: Performance optimization with GPU acceleration, touch/gyroscope support, reduced DOM on mobile
 
 ### 3.1 Polling Architecture (Real-Time Multi-User Sync)
 The app uses a **10-second heartbeat polling system** to simulate real-time collaboration:

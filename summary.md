@@ -9,17 +9,17 @@ A lightweight, mobile-first Lead Management System designed for educational acad
 - **Leads Table**: Spreadsheet-style view with sorting, filtering, and bulk operations
 - **Agent Performance Table**: Real-time metrics showing leads, conversions, and revenue
 - **Reports & Analytics**: Pipeline insights with KPI cards and date filters
-- **Real-Time Sync**: 10-second heartbeat polling for collaborative multi-user updates
+- **Real-Time Sync**: 10-second heartbeat polling for collaborative multi-user updates with LockService concurrency protection
 
 ### Lead Management
 - Create, edit, and delete leads
 - Track lead status, value, source, and interest
 - Assign leads to agents
-- Log follow-ups and activities
+- Log follow-ups and activities (auto-logged on lead assignment)
 - Manage tasks with due dates and priorities
 - View activity timeline for each lead
 - Display phone number when lead name is missing
-- Filter leads with "No Action" status (no pending tasks)
+- Filter leads with "No Action" status (no pending tasks) and "No Task" status (no tasks created)
 
 ### Mobile Optimization
 - Mobile-first responsive design (sm:, md:, lg: breakpoints)
@@ -35,8 +35,9 @@ A lightweight, mobile-first Lead Management System designed for educational acad
 - Quick contact actions (Call, WhatsApp)
 
 ### Follow-Up Dashboard
-- Categorized follow-ups: Overdue, Today, Upcoming
+- Categorized follow-ups: Overdue, Today, Upcoming (next 7 days)
 - Agent filter (Admin/Superuser only)
+- Won/Lost leads excluded from follow-ups
 - Quick access from sidebar
 
 ### Role-Based Access Control (RBAC)
