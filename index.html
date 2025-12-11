@@ -3089,22 +3089,19 @@
                             <!-- Row 5: Value -->
                             <div class="text-sm font-bold text-slate-900 mt-1">${this.formatCurrency(lead.value)}</div>
                             
-                            <!-- Row 6: Action Buttons (Compact) -->
+                            <!-- Row 6: Action Buttons (Icon Only) -->
                             <div class="flex gap-1 flex-wrap mt-1.5">
-                                <button onclick="event.stopPropagation(); app.editLead('${lead.id}', 'activity')" title="Activity" class="flex items-center justify-center gap-1 flex-1 min-w-fit px-1.5 py-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-100 active:bg-blue-200 font-medium text-[10px] transition-colors">
+                                <button onclick="event.stopPropagation(); app.editLead('${lead.id}', 'activity')" title="Activity" class="flex items-center justify-center flex-1 min-w-fit px-1.5 py-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-100 active:bg-blue-200 transition-colors">
                                     <i class="ph-bold ph-chat text-xs"></i>
-                                    ${needsIconMode ? '' : '<span class="hidden sm:inline">Act</span>'}
                                 </button>
-                                <button onclick="event.stopPropagation(); app.editLead('${lead.id}', 'task')" title="Task" class="flex items-center justify-center gap-1 flex-1 min-w-fit px-1.5 py-1 ${isNoAction ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : isNoTask ? 'bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100' : 'bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100'} rounded border active:bg-opacity-75 font-medium text-[10px] transition-colors">
+                                <button onclick="event.stopPropagation(); app.editLead('${lead.id}', 'task')" title="Task" class="flex items-center justify-center flex-1 min-w-fit px-1.5 py-1 ${isNoAction ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : isNoTask ? 'bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100' : 'bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100'} rounded border transition-colors">
                                     <i class="ph-bold ph-plus text-xs"></i>
-                                    ${needsIconMode ? '' : '<span class="hidden sm:inline">Task</span>'}
                                 </button>
                                 ${lead.phone ? `
-                                <a href="tel:${lead.phone.replace(/\s+/g,'')}" onclick="event.stopPropagation()" title="Call" class="flex items-center justify-center gap-1 flex-1 min-w-fit px-1.5 py-1 bg-orange-50 text-orange-600 rounded border border-orange-200 hover:bg-orange-100 active:bg-orange-200 font-medium text-[10px] transition-colors">
+                                <a href="tel:${lead.phone.replace(/\s+/g,'')}" onclick="event.stopPropagation()" title="Call" class="flex items-center justify-center flex-1 min-w-fit px-1.5 py-1 bg-orange-50 text-orange-600 rounded border border-orange-200 hover:bg-orange-100 active:bg-orange-200 transition-colors">
                                     <i class="ph-fill ph-phone text-xs"></i>
-                                    ${needsIconMode ? '' : '<span class="hidden lg:inline">Call</span>'}
                                 </a>
-                                <a href="https://wa.me/${lead.phone.replace(/\D/g,'')}" target="_blank" onclick="event.stopPropagation()" title="WhatsApp" class="flex items-center justify-center gap-1 flex-1 min-w-fit px-1.5 py-1 bg-green-50 text-green-600 rounded border border-green-200 hover:bg-green-100 active:bg-green-200 font-medium text-[10px] transition-colors">
+                                <a href="https://wa.me/${lead.phone.replace(/\D/g,'')}" target="_blank" onclick="event.stopPropagation()" title="WhatsApp" class="flex items-center justify-center flex-1 min-w-fit px-1.5 py-1 bg-green-50 text-green-600 rounded border border-green-200 hover:bg-green-100 active:bg-green-200 transition-colors">
                                     <i class="ph-fill ph-whatsapp-logo text-xs"></i>
                                 </a>
                                 ` : ''}
