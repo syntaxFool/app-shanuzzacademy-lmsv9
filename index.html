@@ -909,6 +909,15 @@
         }
 
         class App {
+                                                                                                                        // Adaptive Polling Configuration
+                                                                                                                        activePollRate = 5000;      // 5 seconds when active
+                                                                                                                        idlePollRate = 40000;       // 40 seconds when idle
+                                                                                                                        idleThreshold = 60000;      // 60 seconds of inactivity triggers idle mode
+                                                                                                                        currentPollRate = 5000;     // Start in active mode
+                                                                                                                        lastActivityTime = Date.now();
+                                                                                                                        pollingTimer = null;
+                                                                                                                        isIdle = false;
+                                                                                                                        
                                                                                                                         addNotification(msg, type = 'info') {
                                                                                                                             if (!this._notifications) this._notifications = [];
                                                                                                                             const timestamp = new Date();
@@ -1001,10 +1010,66 @@
                                                                                                                 setInterval(() => {
                                                                                                                     this.checkUpcomingTasks();
                                                                                                                 }, 60000); // Check tasks every minute
-                                                                                                                // Check for server updates every 10 seconds (real-time sync)
-                                                                                                                setInterval(() => {
-                                                                                                                    this.checkForServerUpdates();
-                                                                                                                }, 10000);
+                                                                                                                // Start adaptive polling system
+                                                                                                                this.initActivityTracker();
+                                                                                                                this.scheduleNextPoll();
+                                                                                                            }
+
+                                                                                                            initActivityTracker() {
+                                                                                                                const resetActivity = () => {
+                                                                                                                    this.lastActivityTime = Date.now();
+                                                                                                                    // If we were idle (poll rate > 5000), switch back to active immediately
+                                                                                                                    if (this.currentPollRate > this.activePollRate) {
+                                                                                                                        console.log('📊 User activity detected: Switching to Fast Polling (5s)');
+                                                                                                                        this.currentPollRate = this.activePollRate;
+                                                                                                                        this.isIdle = false;
+                                                                                                                        // Reschedule to poll immediately
+                                                                                                                        clearTimeout(this.pollingTimer);
+                                                                                                                        this.scheduleNextPoll();
+                                                                                                                    }
+                                                                                                                };
+
+                                                                                                                // Add event listeners for user activity with passive flag for better performance
+                                                                                                                ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(event => {
+                                                                                                                    window.addEventListener(event, resetActivity, { passive: true });
+                                                                                                                });
+                                                                                                                
+                                                                                                                console.log('📊 Activity tracker initialized');
+                                                                                                            }
+
+                                                                                                            scheduleNextPoll() {
+                                                                                                                clearTimeout(this.pollingTimer);
+                                                                                                                
+                                                                                                                this.pollingTimer = setTimeout(() => {
+                                                                                                                    this.performPollStep();
+                                                                                                                }, this.currentPollRate);
+                                                                                                            }
+
+                                                                                                            performPollStep() {
+                                                                                                                // Check activity to determine next rate
+                                                                                                                const timeSinceActivity = Date.now() - this.lastActivityTime;
+
+                                                                                                                if (timeSinceActivity > this.idleThreshold) {
+                                                                                                                    // Switch to Idle Mode
+                                                                                                                    if (!this.isIdle) {
+                                                                                                                        console.log('📊 No activity detected: Switching to Slow Polling (40s)');
+                                                                                                                        this.currentPollRate = this.idlePollRate;
+                                                                                                                        this.isIdle = true;
+                                                                                                                    }
+                                                                                                                } else {
+                                                                                                                    // Switch to Active Mode
+                                                                                                                    if (this.isIdle) {
+                                                                                                                        console.log('📊 Activity detected: Switching to Fast Polling (5s)');
+                                                                                                                        this.currentPollRate = this.activePollRate;
+                                                                                                                        this.isIdle = false;
+                                                                                                                    }
+                                                                                                                }
+
+                                                                                                                // Execute sync
+                                                                                                                this.checkForServerUpdates();
+
+                                                                                                                // Schedule next poll
+                                                                                                                this.scheduleNextPoll();
                                                                                                             }
 
                                                                                                             updateAssignedLeadIds() {
