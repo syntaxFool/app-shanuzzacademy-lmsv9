@@ -35,7 +35,16 @@
         input[type="file"]::file-selector-button { display: none; }
         
         /* Loading Overlay */
-        #loadingOverlay { z-index: 9999; }
+        #loadingOverlay { z-index: 9999; animation: slideDown 0.3s ease-out forwards; }
+        #loadingOverlay.hidden { animation: slideUp 0.3s ease-in forwards; }
+        @keyframes slideDown {
+            from { transform: translate(-50%, -120%); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { transform: translate(-50%, 0); opacity: 1; }
+            to { transform: translate(-50%, -120%); opacity: 0; }
+        }
 
         /* Table Styles */
         .table-row-hover:hover td { background-color: #f8fafc; }
@@ -117,9 +126,10 @@
     </div>
 
     <!-- LOADING OVERLAY -->
-    <div id="loadingOverlay" class="fixed inset-0 bg-slate-900/60 flex flex-col items-center justify-center hidden backdrop-blur-sm">
-        <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent mb-3"></div>
-        <div class="text-white font-bold text-sm" id="loadingText">Syncing...</div>
+    <!-- Floating Sync Status Indicator -->
+    <div id="loadingOverlay" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-indigo-600 to-indigo-700 rounded-full px-4 py-2 shadow-lg flex items-center gap-2 hidden z-50 transition-all duration-300 ease-in-out" style="min-width: 200px;">
+        <div class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+        <span class="text-white font-medium text-sm" id="loadingText">Syncing changes...</span>
     </div>
 
     <!-- LOGIN SCREEN -->
@@ -736,7 +746,7 @@
 
             async syncWithCloud() {
                 if (!this.config.dbUrl) return;
-                ui.showLoading(true);
+                ui.showLoading(true, '📥 Downloading updates...');
                 try {
                     // Support differential sync: pass lastSyncTime to get only changed leads
                     const lastSyncTime = this.lastSyncTime || 0;
@@ -796,7 +806,7 @@
             }
             async pushToCloud() {
                 if (!this.config.dbUrl) return;
-                ui.showLoading(true);
+                ui.showLoading(true, '📤 Uploading changes...');
                 try {
                     const payload = { action: 'save_all', leads: this.state, users: this.users, logs: this.logs, config: this.config };
                     await fetch(this.config.dbUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) });
@@ -3397,7 +3407,17 @@
             toggleMenu: (s) => { const m = document.getElementById('sideMenu'); if(s) { try { window.app.renderFollowUps(); } catch(e){} m.classList.remove('hidden'); requestAnimationFrame(()=>m.classList.add('open')); } else { m.classList.remove('open'); setTimeout(()=>m.classList.add('hidden'),300); } },
             toggleLogs: (s) => { const m = document.getElementById('logsModal'); if(s) { try { window.app.renderLogs(); } catch(e){} m.classList.remove('hidden'); requestAnimationFrame(()=>m.classList.add('open')); } else { m.classList.remove('open'); setTimeout(()=>m.classList.add('hidden'),300); } },
             toggleConfig: (s) => { const m = document.getElementById('configModal'); if(s) { try { window.app.renderUserList(); } catch(e){} m.classList.remove('hidden'); requestAnimationFrame(()=>m.classList.add('open')); } else { m.classList.remove('open'); setTimeout(()=>m.classList.add('hidden'),300); } },
-            showLoading: (s) => { const l = document.getElementById('loadingOverlay'); if(s) l.classList.remove('hidden'); else l.classList.add('hidden'); }
+            showLoading: (s, message = 'Syncing changes...') => { 
+                const l = document.getElementById('loadingOverlay'); 
+                const msg = document.getElementById('loadingText');
+                if(s) { 
+                    msg.textContent = message;
+                    l.classList.remove('hidden'); 
+                } else { 
+                    l.classList.add('hidden'); 
+                    setTimeout(() => { msg.textContent = 'Syncing changes...'; }, 300);
+                }
+            }
         };
 
         // Explictly attach to window
