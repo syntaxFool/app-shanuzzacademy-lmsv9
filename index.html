@@ -2266,7 +2266,7 @@
                             assignedTo: f.assignedTo.value || currentLead.assignedTo,
                             phone: fullPhone,
                             notes: f.notes.value,
-                            userRole: currentUserRole
+                            userRole: this.currentUser.role
                         };
                         this.showLostReasonModal(leadId);
                         return;
@@ -2504,7 +2504,7 @@
                         
                         // Only allow Admin and Senior Manager to change status to Lost
                         const userRole = this._pendingFormData.userRole;
-                        if (userRole !== 'Admin' && userRole !== 'Senior Manager') {
+                        if (userRole !== 'admin' && userRole !== 'senior_manager') {
                             this.notify('You do not have permission to mark leads as Lost', 'error');
                             this.closeLostReasonModal();
                             return;
@@ -2515,7 +2515,7 @@
                     } else {
                         // Came from drag-drop
                         // Only allow Admin and Senior Manager to change status to Lost
-                        if (currentUserRole !== 'Admin' && currentUserRole !== 'Senior Manager') {
+                        if (this.currentUser.role !== 'admin' && this.currentUser.role !== 'senior_manager') {
                             this.notify('You do not have permission to mark leads as Lost', 'error');
                             this.closeLostReasonModal();
                             return;
@@ -2597,7 +2597,7 @@
                 // If moving to "Lost", show the reason modal
                 if (s === 'Lost') {
                     // Only allow Admin and Senior Manager to change status to Lost
-                    if (currentUserRole !== 'Admin' && currentUserRole !== 'Senior Manager') {
+                    if (this.currentUser.role !== 'admin' && this.currentUser.role !== 'senior_manager') {
                         this.notify('You do not have permission to mark leads as Lost', 'error');
                         return;
                     }
