@@ -217,15 +217,6 @@
                 </button>
                 <button onclick="app.sync()" class="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition" title="Force Sync"><i class="ph-bold ph-arrows-clockwise text-xl"></i></button>
             </div>
-                <!-- NOTIFICATION BOX -->
-                <div id="notificationBox" class="fixed top-16 left-1/2 -translate-x-1/2 z-[101] w-80 max-w-full bg-white border border-slate-200 rounded-xl shadow-xl p-4 hidden">
-                    <div class="flex justify-between items-center mb-2">
-                        <h4 class="font-bold text-slate-800 text-base flex items-center gap-2"><i class="ph-bold ph-bell text-green-600"></i> Notifications</h4>
-                        <button onclick="ui.toggleNotificationBox()" class="text-slate-400 hover:text-slate-600"><i class="ph-bold ph-x"></i></button>
-                    </div>
-                    <div id="notificationList" class="space-y-3 max-h-64 overflow-y-auto"></div>
-                    <div id="notificationEmpty" class="text-slate-400 text-sm text-center py-6">No notifications</div>
-                </div>
         </header>
 
         <!-- Mobile Tabs -->
@@ -946,12 +937,13 @@
 
                                                                                                                         renderNotificationBox() {
                                                                                                                             const list = document.getElementById('notificationList');
-                                                                                                                            const empty = document.getElementById('notificationEmpty');
                                                                                                                             const count = document.getElementById('notificationCount');
                                                                                                                             if (!this._notifications || this._notifications.length === 0) {
-                                                                                                                                list.innerHTML = '';
-                                                                                                                                empty.style.display = '';
-                                                                                                                                count.style.display = 'none';
+                                                                                                                                list.innerHTML = `<div id="notificationEmpty" class="text-slate-400 text-sm text-center py-12 flex flex-col items-center gap-2">
+                                                                                                                                    <i class="ph-bold ph-bell-slash text-3xl opacity-30"></i>
+                                                                                                                                    <span>No notifications yet</span>
+                                                                                                                                </div>`;
+                                                                                                                                if (count) count.style.display = 'none';
                                                                                                                                 return;
                                                                                                                             }
                                                                                                                             
@@ -975,9 +967,10 @@
                                                                                                                                     </button>
                                                                                                                                 </div>`;
                                                                                                                             }).join('');
-                                                                                                                            empty.style.display = 'none';
-                                                                                                                            count.textContent = this._notifications.length;
-                                                                                                                            count.style.display = '';
+                                                                                                                            if (count) {
+                                                                                                                                count.textContent = this._notifications.length;
+                                                                                                                                count.style.display = '';
+                                                                                                                            }
                                                                                                                         }
                                                                                                                         
                                                                                                                         clearAllNotifications() {
