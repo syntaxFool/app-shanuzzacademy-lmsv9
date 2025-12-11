@@ -3069,18 +3069,20 @@
                                 </span>
                             </div>
                             
-                            <!-- Row 3-4: Interests (compact) -->
-                            ${interests.length > 0 ? `<div class="text-[11px] text-slate-600 leading-snug">
-                                ${interests.slice(0, interests.length > 2 ? 1 : 2).map(i => `<div class="line-clamp-1">${this.escapeHtml(i)}</div>`).join('')}
-                                ${interests.length > 1 ? `<div class="line-clamp-1">${this.escapeHtml(interests[1])}</div>` : ''}
-                                ${interests.length > 2 ? `<div class="text-slate-400 text-[10px]">+${interests.length - 2}</div>` : ''}
+                            <!-- Row 3-4: Interests (styled) -->
+                            ${interests.length > 0 ? `<div class="flex flex-col gap-0.5 mt-1">
+                                ${interests.slice(0, 2).map((i, idx) => `<div class="inline-flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-md text-[11px] font-medium text-indigo-700 line-clamp-1">
+                                    <i class="ph-bold ph-star text-indigo-600 text-xs"></i>
+                                    <span>${this.escapeHtml(i)}</span>
+                                </div>`).join('')}
+                                ${interests.length > 2 ? `<div class="text-[10px] font-medium text-slate-400 px-2 py-0.5">+${interests.length - 2} interest${interests.length - 2 > 1 ? 's' : ''}</div>` : ''}
                             </div>` : ''}
                             
                             <!-- Row 5: Value -->
-                            <div class="text-sm font-bold text-slate-900 mt-0.5">${this.formatCurrency(lead.value)}</div>
+                            <div class="text-sm font-bold text-slate-900 mt-1">${this.formatCurrency(lead.value)}</div>
                             
                             <!-- Row 6: Action Buttons (Compact) -->
-                            <div class="flex gap-1 flex-wrap mt-1">
+                            <div class="flex gap-1 flex-wrap mt-1.5">
                                 <button onclick="event.stopPropagation(); app.editLead('${lead.id}', 'activity')" title="Activity" class="flex items-center justify-center gap-1 flex-1 min-w-fit px-1.5 py-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-100 active:bg-blue-200 font-medium text-[10px] transition-colors">
                                     <i class="ph-bold ph-chat text-xs"></i>
                                     ${needsIconMode ? '' : '<span class="hidden sm:inline">Act</span>'}
