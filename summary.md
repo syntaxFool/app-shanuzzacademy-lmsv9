@@ -12,7 +12,7 @@ A lightweight, mobile-first Lead Management System designed for educational acad
 - **Real-Time Sync**: 10-second heartbeat polling for collaborative multi-user updates with LockService concurrency protection
 
 ### Lead Management
-- Create, edit, and delete leads
+- Create, edit, and delete leads (bulk delete with confirmation for admin/superuser)
 - Track lead status, value, source, and interest
 - Assign leads to agents
 - Log follow-ups and activities (auto-logged on lead assignment)
@@ -22,6 +22,8 @@ A lightweight, mobile-first Lead Management System designed for educational acad
 - Filter leads with "No Action" status (no pending tasks) and "No Task" status (no tasks created)
 - Icon-only action buttons for quick access (Activity, Task, Call, WhatsApp) on lead cards
 - Single-line notes display on lead cards to preserve space
+- Track why leads are lost with detailed explanations (💰 Price too high, 😕 Not interested, 🏆 Chose competitor, 📞 Invalid number, 🔄 Duplicate, 📝 Other)
+- Lost reasons chart with emoji visualization in analytics
 
 ### Mobile Optimization
 - Mobile-first responsive design (sm:, md:, lg: breakpoints)

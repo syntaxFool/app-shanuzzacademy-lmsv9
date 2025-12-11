@@ -28,7 +28,14 @@
 
 ## 3. Architecture & Data Flow
 
-### Recent Improvements (v9.4 - Security Hardening)
+### Recent Improvements (v9.5 - Enhanced Analytics & Data Management)
+- ✅ **Lost Reason Details**: All 6 lost reason types now require detailed explanations
+- ✅ **Emoji-Enhanced Chart**: "Why Leads Are Lost" pie chart displays 💰 Price too high, 😕 Not interested, 🏆 Competitor, 📞 Invalid number, 🔄 Duplicate, 📝 Other
+- ✅ **Bulk Delete Leads**: Admin/superuser can bulk delete leads with confirmation dialog showing lead names
+- ✅ **Audit Logging**: All lead deletions are logged in the audit trail
+- ✅ **Role-Based Delete**: Delete functionality only visible to admin/superuser users
+
+### Previous Improvements (v9.4 - Security Hardening)
 - ✅ **Comprehensive XSS Protection**: All notification fields (msg, ts, fullTs) HTML-escaped using `escapeHtml()` utility
 - ✅ **Leaderboard HTML Injection Fix**: Agent names and metrics in leaderboard table escape all user input
 - ✅ **Notification Safety**: Toast notifications use `textContent` instead of `innerHTML` to prevent script injection
@@ -748,6 +755,7 @@ app-shanuzzacademy-lmsv9/
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v9.5 | Dec 12, 2025 | Enhanced lost reason tracking with details, emoji chart, bulk delete with audit logging |
 | v9.4 | Dec 11, 2025 | Security hardening - XSS protection, HTML injection prevention, WCAG compliance |
 | v9.3 | Dec 8, 2025 | Adaptive polling, floating sync overlay, Kanban card layout optimization |
 | v9 | Dec 8, 2025 | Mobile optimizations, notification improvements, agent table redesign |

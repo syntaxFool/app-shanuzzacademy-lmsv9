@@ -2,7 +2,7 @@
 
 This guide explains how to customize the Shanuzz Academy LMS v9 for other businesses (Salon, Coaching, Real Estate, etc.). The app architecture remains the same—only configuration and branding change.
 
-**Latest Version**: v9.4 includes comprehensive XSS protection, HTML injection prevention in leaderboards, WCAG accessibility compliance, and security hardening. All user inputs are properly escaped before rendering. Previous versions included adaptive polling (5s active / 40s idle), floating sync overlay, lost reason persistence fix, and improved Kanban card layout with icon-only action buttons.
+**Latest Version**: v9.5 includes enhanced lost reason tracking with required details for all reasons, emoji-enhanced lost reasons chart (💰 Price too high, 😕 Not interested, 🏆 Competitor, 📞 Invalid number, 🔄 Duplicate, 📝 Other), and bulk delete functionality for admin/superuser with audit logging. Previous versions included security hardening (XSS protection, HTML injection prevention), adaptive polling, and improved Kanban card layout.
 
 ---
 
