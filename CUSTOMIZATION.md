@@ -2,7 +2,7 @@
 
 This guide explains how to customize the Shanuzz Academy LMS v9 for other businesses (Salon, Coaching, Real Estate, etc.). The app architecture remains the same—only configuration and branding change.
 
-**Latest Version**: v9.2 includes location/source field fixes, DD/MM/YYYY date standardization, activity logging on assignment, improved follow-up date logic, performance optimization for syntaxfoolcard.html, and verified dual task filtering.
+**Latest Version**: v9.3 includes adaptive polling (5s active / 40s idle), floating sync overlay, lost reason persistence fix, improved Kanban card layout with icon-only action buttons, gradient interest badges, and support for multiple cards per column.
 
 ---
 

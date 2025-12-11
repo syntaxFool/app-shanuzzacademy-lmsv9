@@ -20,6 +20,8 @@ A lightweight, mobile-first Lead Management System designed for educational acad
 - View activity timeline for each lead
 - Display phone number when lead name is missing
 - Filter leads with "No Action" status (no pending tasks) and "No Task" status (no tasks created)
+- Icon-only action buttons for quick access (Activity, Task, Call, WhatsApp) on lead cards
+- Single-line notes display on lead cards to preserve space
 
 ### Mobile Optimization
 - Mobile-first responsive design (sm:, md:, lg: breakpoints)
@@ -138,10 +140,14 @@ A lightweight, mobile-first Lead Management System designed for educational acad
 - **Name Fallback**: Displays phone number if lead name is missing
 
 ### Kanban Board
-- Cards show lead name, status, and value (responsive sizing for desktop)
+- Cards display in organized 7-row layout: Name, AssignedTo|Status|Temperature, Interests, Value, Action Buttons, Notes, Navigation
+- Compact icon-only action buttons (Activity/Task/Call/WhatsApp) that span full card width
+- Gradient-styled interest badges with star icons
+- Single-line notes display for space efficiency
 - Mobile tabs for easy status switching
 - Status categories: New, Contacted, Proposal, Won, Lost
-- Optimized spacing and padding for larger desktop screens
+- Multiple cards visible per column (scrollable)
+- Responsive spacing optimized for desktop and mobile
 - Displays phone number if lead name is unavailable
 
 ### Reports

@@ -28,7 +28,18 @@
 
 ## 3. Architecture & Data Flow
 
-### Recent Improvements (v9.2)
+### Recent Improvements (v9.3)
+- ✅ **Adaptive Polling**: Smart polling system switches between 5s (active user) and 40s (idle) based on user activity detection
+- ✅ **Floating Sync Overlay**: Non-blocking status indicator that displays at top-center with contextual sync messages
+- ✅ **Lost Reason Persistence**: Fixed bug where lost reasons were cleared on lead edit - now properly preserved
+- ✅ **Kanban Card 7-Row Layout**: Organized card structure (Name, AssignedTo|Status|Temp, Interests, Value, Actions, Notes, Navigation)
+- ✅ **Icon-Only Action Buttons**: Compact buttons showing only icons (Activity/Task/Call/WhatsApp) spanning full width
+- ✅ **Gradient Interest Badges**: Styled interest display with star icons and gradient backgrounds
+- ✅ **Multiple Cards Per Column**: Fixed h-full constraint to allow multiple lead cards visible in each Kanban column
+- ✅ **Single-Line Notes**: Notes display as single line on cards with truncate overflow handling
+- ✅ **Consolidated Status Row**: Single row showing AssignedTo | Status | Temperature with proper spacing
+
+### Previous Improvements (v9.2)
 - ✅ **Location & Source Fix**: Fixed form field access issue where location and source were showing blank (form.location shadowing)
 - ✅ **Date Standardization**: All dates now display in DD/MM/YYYY format globally (dates + times show DD/MM/YYYY HH:MM AM/PM)
 - ✅ **Activity Logging**: Automatic activity logging when leads are assigned to users (both new and existing)
