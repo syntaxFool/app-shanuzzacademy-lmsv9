@@ -65,7 +65,7 @@
             background-size: 100% 4px;
             pointer-events: none;
             z-index: 20;
-            opacity: 0.6;
+            opacity: 0.3;
         }
 
         /* 3D Wrapper for the Tilt Effect */
@@ -83,17 +83,13 @@
             text-align: center;
             user-select: none;
             transform-origin: center center;
-            will-change: transform;
             position: relative;
-            contain: layout paint;
-            backface-visibility: hidden;
-            -webkit-backface-visibility: hidden;
         }
 
         /* ANIMATION DEFINITION: Data Flux */
         @keyframes flux {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.8; }
+            50% { opacity: 0.85; }
         }
         
         @media (max-width: 768px) {
@@ -112,23 +108,13 @@
             100% { transform: translate(0); }
         }
 
-        /* Glitch Class (Applied via JS) */
-        .glitch-active #ascii-container {
-            animation: glitch-anim 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite;
-            /* Chromatic Aberration */
-            text-shadow: 2px 0 var(--glitch-1), -2px 0 var(--glitch-2);
-            filter: contrast(200%);
-        }
-
         /* The "1"s (The Image) */
         .bit-on {
             display: inline-block; 
             color: var(--bit-on);
             font-weight: 900;
             text-shadow: var(--glow);
-            transition: transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94), color 0.3s; 
-            animation: flux 3s infinite ease-in-out;
-            transform: translateZ(0);
+            animation: flux var(--delay, 3s) infinite ease-in-out;
         }
 
         /* The "0"s (The Background) */
@@ -136,8 +122,7 @@
             display: inline-block; 
             color: var(--bit-off);
             font-weight: 100;
-            transition: transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94), color 0.3s;
-            transform: translateZ(0);
+        }
         }
 
         /* INTERACTIVITY: MAGNIFICATION EFFECT */
@@ -236,7 +221,7 @@
         
         // Dynamic resolution based on device
         const isMobile = window.innerWidth < 768;
-        const widthResolution = isMobile ? 85 : 150; 
+        const widthResolution = isMobile ? 60 : 100; 
 
         const canvas = document.getElementById('processor');
         const ctx = canvas.getContext('2d');
@@ -246,7 +231,10 @@
         img.crossOrigin = "Anonymous";
         img.src = imagePath;
 
-        img.onload = () => { renderAscii(); };
+        // Lazy load: only render when image is actually loaded
+        img.onload = () => { 
+            setTimeout(() => renderAscii(), 0);
+        };
         img.onerror = () => { output.innerText = "Error: Input signal lost."; };
 
         function renderAscii() {
@@ -266,33 +254,30 @@
             ctx.filter = 'none'; 
 
             const data = ctx.getImageData(0, 0, widthResolution, heightResolution).data;
-            let asciiBuffer = [];
+            const fragment = document.createDocumentFragment();
             
-            // Performance optimization: on mobile, don't wrap 0s in spans
-            const useLiteMode = isMobile;
-
             for (let y = 0; y < heightResolution; y++) {
                 for (let x = 0; x < widthResolution; x++) {
                     const offset = (y * widthResolution + x) * 4;
                     const brightness = (data[offset] * 0.299 + data[offset + 1] * 0.587 + data[offset + 2] * 0.114);
 
                     if (brightness < 240) {
-                        const delay = (Math.random() * 5).toFixed(2);
-                        const style = `style="animation-delay: ${delay}s"`;
-                        asciiBuffer.push(`<span class="bit-on" ${style}>1</span>`);
+                        const span = document.createElement('span');
+                        span.className = 'bit-on';
+                        // Use CSS variable for animation delay instead of inline style
+                        span.style.setProperty('--delay', (Math.random() * 5).toFixed(2) + 's');
+                        span.textContent = '1';
+                        fragment.appendChild(span);
                     } else {
-                        // On mobile: plain text; on desktop: wrapped for hover effect
-                        if (useLiteMode) {
-                            asciiBuffer.push('0');
-                        } else {
-                            asciiBuffer.push('<span class="bit-off">0</span>');
-                        }
+                        // Plain text 0 for better performance
+                        fragment.appendChild(document.createTextNode('0'));
                     }
                 }
-                asciiBuffer.push("<br>");
+                fragment.appendChild(document.createElement('br'));
             }
 
-            output.innerHTML = asciiBuffer.join('');
+            output.textContent = '';
+            output.appendChild(fragment);
             fitToScreen();
         }
 
@@ -317,8 +302,13 @@
         let mouseX = 0;
         let mouseY = 0;
         let isTiltUpdatePending = false;
+        let lastTiltUpdateTime = 0;
+        const TILT_THROTTLE = 16; // ~60fps
 
         document.addEventListener('mousemove', (e) => {
+            const now = Date.now();
+            if (now - lastTiltUpdateTime < TILT_THROTTLE) return;
+            
             // Calculate mouse position as a percentage (-1 to 1)
             mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
             mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
@@ -326,6 +316,7 @@
             if (!isTiltUpdatePending) {
                 requestAnimationFrame(updateTilt);
                 isTiltUpdatePending = true;
+                lastTiltUpdateTime = now;
             }
         });
         
@@ -342,41 +333,6 @@
                 }
             }
         }, { passive: true });
-        
-        // Device orientation support for gyroscope-enabled devices
-        function handleDeviceOrientation(event) {
-            if (!event.gamma || !event.beta) return;
-            
-            const maxTilt = 8;
-            let tiltX = event.gamma;
-            let tiltY = event.beta;
-            
-            if (Math.abs(tiltX) > maxTilt) tiltX = tiltX > 0 ? maxTilt : -maxTilt;
-            if (Math.abs(tiltY) > maxTilt) tiltY = tiltY > 0 ? maxTilt : -maxTilt;
-            
-            mouseX = (tiltX / maxTilt) * 0.5;
-            mouseY = (tiltY / maxTilt) * 0.5;
-            
-            if (!isTiltUpdatePending) {
-                requestAnimationFrame(updateTilt);
-                isTiltUpdatePending = true;
-            }
-        }
-        
-        // Request permission for iOS 13+
-        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-            document.addEventListener('click', () => {
-                DeviceOrientationEvent.requestPermission()
-                    .then(response => {
-                        if (response === 'granted') {
-                            window.addEventListener('deviceorientation', handleDeviceOrientation);
-                        }
-                    })
-                    .catch(() => {});
-            }, { once: true });
-        } else {
-            window.addEventListener('deviceorientation', handleDeviceOrientation);
-        }
 
         function updateTilt() {
             // Max rotation degrees
@@ -392,30 +348,6 @@
             }
             isTiltUpdatePending = false;
         }
-
-        // --- GLITCH PROTOCOL ---
-        function triggerGlitch() {
-            document.body.classList.add('glitch-active');
-            
-            setTimeout(() => {
-                document.body.classList.remove('glitch-active');
-            }, 200);
-
-            scheduleNextGlitch();
-        }
-
-        function scheduleNextGlitch() {
-            const randomTime = Math.random() * 7000 + 3000; 
-            setTimeout(() => {
-                if(!document.hidden) {
-                    triggerGlitch();
-                } else {
-                    scheduleNextGlitch();
-                }
-            }, randomTime);
-        }
-
-        scheduleNextGlitch();
 
     </script>
 </body>
