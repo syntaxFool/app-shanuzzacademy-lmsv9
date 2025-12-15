@@ -1603,7 +1603,7 @@
                                                         return `
                                                         <tr class="table-row-hover ${isNoAction ? 'bg-red-50' : isNoTask ? 'bg-amber-50' : 'hover:bg-slate-50'} active:bg-slate-100 transition">
                                                             <td class="pl-3 sm:pl-4 py-2 sm:py-3"><input type="checkbox" class="leadCheckbox w-4 h-4 rounded" data-leadId="${lead.id}" onchange="app.updateBulkActionsBar()"></td>
-                                                            <td class="pl-3 sm:pl-4 py-2 sm:py-3 font-bold text-slate-800"><span class="inline-flex items-center gap-1.5">${this.escapeHtml(lead.name || lead.phone)}${badge}</span></td>
+                                                            <td class="pl-3 sm:pl-4 py-2 sm:py-3 font-bold text-slate-800 cursor-pointer hover:text-primary transition" onclick="app.editLead('${lead.id}', null, true)"><span class="inline-flex items-center gap-1.5">${this.escapeHtml(lead.name || lead.phone)}${badge}</span></td>
                                                             <td class="px-2 sm:px-3 py-2 sm:py-3 hidden sm:table-cell text-slate-600"><div class="text-xs">${this.escapeHtml(lead.phone || '-')}</div><div class="text-xs text-slate-400 line-clamp-1">${this.escapeHtml(lead.email || '')}</div></td>
                                                             <td class="px-2 sm:px-3 py-2 sm:py-3"><span class="inline-block px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded font-medium whitespace-nowrap">${this.escapeHtml(lead.status)}</span></td>
                                                             <td class="px-2 sm:px-3 py-2 sm:py-3 hidden md:table-cell">${lead.status === 'Lost' && lead.lostReason ? `<span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded font-medium">${this.escapeHtml(lead.lostReason)}</span>` : '-'}</td>
@@ -2279,17 +2279,29 @@
             }
 
             // --- EDIT LEAD LOGIC ---
-            editLead(id, tab) {
+            editLead(id, tab, viewOnly = false) {
                 const lead = this.store.state.find(l => l.id === id);
                 if (!lead) return;
                 // Store current editing lead ID for soft sync detection
                 document.getElementById('leadModal').dataset.leadId = id;
+                // Store view-only mode flag
+                document.getElementById('leadModal').dataset.viewOnly = viewOnly;
                 // Store lead snapshot for optimistic locking (conflict detection)
                 this._editingLeadSnapshot = JSON.parse(JSON.stringify(lead));
                 // Fill modal form fields
                 document.getElementById('leadIdInput').value = lead.id;
-                document.getElementById('modalTitle').textContent = 'Edit Lead';
-                document.getElementById('submitBtn').textContent = 'Update';
+                document.getElementById('modalTitle').textContent = viewOnly ? 'View Lead' : 'Edit Lead';
+                
+                // Update button text and disable form inputs if view-only
+                const submitBtn = document.getElementById('submitBtn');
+                if (viewOnly) {
+                    submitBtn.textContent = 'Edit';
+                    submitBtn.onclick = () => this.editLead(id, tab, false); // Switch to edit mode
+                } else {
+                    submitBtn.textContent = 'Update';
+                    submitBtn.onclick = () => document.getElementById('leadForm').dispatchEvent(new Event('submit', {cancelable: true, bubbles: true}));
+                }
+                
                 document.getElementById('tab-btn-activity').disabled = false;
                 document.getElementById('tab-btn-contact').disabled = false;
                 document.getElementById('leadForm').name.value = lead.name || '';
@@ -2300,6 +2312,16 @@
                 document.getElementById('leadForm').email.value = lead.email || '';
                 document.getElementById('leadForm').querySelector('input[name="location"]').value = lead.location || '';
                 document.getElementById('leadForm').querySelector('input[name="source"]').value = lead.source || '';
+                
+                // Disable/enable form inputs based on view-only mode
+                const formInputs = document.getElementById('leadForm').querySelectorAll('input, select, textarea');
+                formInputs.forEach(input => {
+                    input.disabled = viewOnly;
+                });
+                // Also disable the interest input
+                const interestInput = document.getElementById('interestInput');
+                if (interestInput) interestInput.disabled = viewOnly;
+                
                 // Assigned To select - only editable by admins
                 const isAdmin = this.currentUser && (this.currentUser.role === 'admin' || this.currentUser.role === 'superuser');
                 const assignedToSelect = document.getElementById('assignedToSelect');
@@ -2310,6 +2332,7 @@
                     assignedToSelect.classList.remove('hidden');
                     assignedToDisplay.classList.add('hidden');
                     if (assignedToSelect) assignedToSelect.value = lead.assignedTo || '';
+                    assignedToSelect.disabled = viewOnly;
                 } else {
                     // Agent: show read-only display
                     assignedToSelect.classList.add('hidden');
@@ -3463,7 +3486,7 @@
                 const cardWidth = 320; // Approximate card width
 
                 return `
-                    <div onclick="app.editLead('${lead.id}')" class="bg-white rounded-xl shadow-sm border ${isNoAction ? 'border-red-300 bg-red-50/30' : isNoTask ? 'border-amber-300 bg-amber-50/30' : 'border-slate-100'} active:scale-[0.99] transition-transform cursor-pointer ${lead.status === 'Lost' ? 'grayscale opacity-60' : ''} overflow-hidden flex flex-col">
+                    <div onclick="app.editLead('${lead.id}', null, true)" class="bg-white rounded-xl shadow-sm border ${isNoAction ? 'border-red-300 bg-red-50/30' : isNoTask ? 'border-amber-300 bg-amber-50/30' : 'border-slate-100'} active:scale-[0.99] transition-transform cursor-pointer ${lead.status === 'Lost' ? 'grayscale opacity-60' : ''} overflow-hidden flex flex-col">
                         <!-- Card Content -->
                         <div class="p-3 flex flex-col gap-1.5 flex-1">
                             <!-- Row 1: Name + Badge -->
