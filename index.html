@@ -1666,14 +1666,15 @@
                                                     const assignedSelect = document.getElementById('filterAssignedTo');
                                                     const noTaskCheckbox = document.getElementById('filterNoTask');
                                                     const noActionCheckbox = document.getElementById('filterNoAction');
-                                                    const followUpCheckboxes = document.querySelectorAll('input[name="followUpFilter"]:checked');
+                                                    const followUpCheckboxes = document.querySelectorAll('input[name="followUpFilter"]');
                                                     
                                                     if (searchInput) this.filters.search = searchInput.value.toLowerCase().trim();
                                                     if (statusSelect) this.filters.status = statusSelect.value;
                                                     if (assignedSelect) this.filters.assignedTo = assignedSelect.value;
                                                     
-                                                    // Collect all checked follow-up filters
-                                                    const checkedFollowUps = Array.from(followUpCheckboxes).map(cb => cb.value);
+                                                    // Get the currently checked follow-up filter (mutually exclusive - only 1)
+                                                    const checkedFollowUp = Array.from(followUpCheckboxes).find(cb => cb.checked);
+                                                    const checkedFollowUps = checkedFollowUp ? [checkedFollowUp.value] : [];
                                                     
                                                     // Task Filters and Follow Up Filters are mutually exclusive
                                                     const hasTaskFilters = noTaskCheckbox.checked || noActionCheckbox.checked;
@@ -1686,7 +1687,12 @@
                                                         this.filters.noTask = false;
                                                         this.filters.noAction = false;
                                                         this.filters.followUpFilters = checkedFollowUps;
-                                                        console.log('📅 Follow Up Filters set to:', checkedFollowUps);
+                                                        
+                                                        // Uncheck all other follow-up filters (mutually exclusive)
+                                                        followUpCheckboxes.forEach(cb => {
+                                                            if (cb !== checkedFollowUp) cb.checked = false;
+                                                        });
+                                                        console.log('📅 Follow Up Filter set to:', checkedFollowUps[0]);
                                                     } else if (hasTaskFilters) {
                                                         // Task filter is active, disable follow-up filters
                                                         document.querySelectorAll('input[name="followUpFilter"]').forEach(cb => {
