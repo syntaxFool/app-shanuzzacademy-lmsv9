@@ -280,22 +280,26 @@
                             <!-- Follow Up Filters -->
                             <div>
                                 <label class="text-xs font-semibold text-slate-600 block mb-2">Follow Up Filters</label>
-                                <div class="flex flex-col gap-1">
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <input type="radio" name="followUpFilter" value="all-followups" checked onchange="app.applyFilters()" class="w-4 h-4 rounded border-slate-300 cursor-pointer">
-                                        <span class="text-sm text-slate-700">All Follow Ups</span>
+                                <div class="flex flex-col gap-2">
+                                    <label class="flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-slate-50 transition">
+                                        <input type="radio" name="followUpFilter" value="all-followups" checked onchange="app.applyFilters()" class="w-4 h-4 accent-slate-600 cursor-pointer">
+                                        <span class="text-sm text-slate-700 flex-1">All Follow Ups</span>
+                                        <i class="ph-bold ph-check text-slate-400 text-sm hidden checked-icon"></i>
                                     </label>
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <input type="radio" name="followUpFilter" value="overdue-followups" onchange="app.applyFilters()" class="w-4 h-4 rounded border-slate-300 cursor-pointer">
-                                        <span class="text-sm text-red-600 font-semibold">🔴 Overdue</span>
+                                    <label class="flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-red-50 transition">
+                                        <input type="radio" name="followUpFilter" value="overdue-followups" onchange="app.applyFilters()" class="w-4 h-4 accent-red-600 cursor-pointer">
+                                        <span class="text-sm text-red-600 font-semibold flex-1">🔴 Overdue</span>
+                                        <i class="ph-bold ph-check text-red-400 text-sm hidden checked-icon"></i>
                                     </label>
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <input type="radio" name="followUpFilter" value="today-followups" onchange="app.applyFilters()" class="w-4 h-4 rounded border-slate-300 cursor-pointer">
-                                        <span class="text-sm text-blue-600 font-semibold">📘 Today</span>
+                                    <label class="flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-blue-50 transition">
+                                        <input type="radio" name="followUpFilter" value="today-followups" onchange="app.applyFilters()" class="w-4 h-4 accent-blue-600 cursor-pointer">
+                                        <span class="text-sm text-blue-600 font-semibold flex-1">📘 Today</span>
+                                        <i class="ph-bold ph-check text-blue-400 text-sm hidden checked-icon"></i>
                                     </label>
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <input type="radio" name="followUpFilter" value="upcoming-followups" onchange="app.applyFilters()" class="w-4 h-4 rounded border-slate-300 cursor-pointer">
-                                        <span class="text-sm text-green-600 font-semibold">📗 Upcoming</span>
+                                    <label class="flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-green-50 transition">
+                                        <input type="radio" name="followUpFilter" value="upcoming-followups" onchange="app.applyFilters()" class="w-4 h-4 accent-green-600 cursor-pointer">
+                                        <span class="text-sm text-green-600 font-semibold flex-1">📗 Upcoming</span>
+                                        <i class="ph-bold ph-check text-green-400 text-sm hidden checked-icon"></i>
                                     </label>
                                 </div>
                             </div>
@@ -1604,6 +1608,7 @@
                                                     }).join('');
                                                     // Reset bulk actions bar
                                                     this.updateBulkActionsBar();
+                                                    this.initializeFollowUpCheckmarks();
                                                 }
 
                                                 // Sort table by column
@@ -1679,6 +1684,16 @@
                                                     if (followUpRadio) {
                                                         this.filters.followUpFilter = followUpRadio.value;
                                                         console.log('📅 Follow Up Filter set to:', this.filters.followUpFilter);
+                                                        // Update checkmark visibility for Follow Up Filters
+                                                        document.querySelectorAll('input[name="followUpFilter"]').forEach(radio => {
+                                                            const label = radio.closest('label');
+                                                            const checkmark = label.querySelector('.checked-icon');
+                                                            if (radio.checked && checkmark) {
+                                                                checkmark.classList.remove('hidden');
+                                                            } else if (!radio.checked && checkmark) {
+                                                                checkmark.classList.add('hidden');
+                                                            }
+                                                        });
                                                     }
                                                     
                                                     // Re-render with filtered and sorted data
@@ -2122,7 +2137,22 @@
                                 const icon = activityIcons[a.type] || '📌';
                                 const timestamp = a.timestamp ? this.formatDateTime(a.timestamp) : '';
                                 const type = a.type ? a.type.replace(/_/g, ' ').toUpperCase() : 'ACTIVITY';
-                                const note = a.note || '';
+                                let note = a.note || '';
+                                
+                                // Fix: Format ISO dates in follow_up activities back to readable date (IST)
+                                if (a.type === 'follow_up' && note && note.includes('T') && note.includes('Z')) {
+                                    try {
+                                        // Convert ISO string to IST date string (YYYY-MM-DD)
+                                        const istDate = this.getISTDate(new Date(note));
+                                        const year = istDate.getFullYear();
+                                        const month = String(istDate.getMonth() + 1).padStart(2, '0');
+                                        const day = String(istDate.getDate()).padStart(2, '0');
+                                        note = `${year}-${month}-${day}`;
+                                    } catch (e) {
+                                        // Keep original if parsing fails
+                                    }
+                                }
+
                                 const createdBy = a.createdBy ? this.escapeHtml(a.createdBy) : '';
                                 const role = a.role ? ` (${this.escapeHtml(a.role)})` : '';
                                 
@@ -2259,6 +2289,19 @@
                     if (this.currentUser) {
                         this.render(data);
                         if(document.getElementById('sideMenu').classList.contains('open')) this.renderFollowUps();
+                    }
+                });
+            }
+
+            // Initialize Follow Up filter checkmarks
+            initializeFollowUpCheckmarks() {
+                document.querySelectorAll('input[name="followUpFilter"]').forEach(radio => {
+                    const label = radio.closest('label');
+                    const checkmark = label.querySelector('.checked-icon');
+                    if (radio.checked && checkmark) {
+                        checkmark.classList.remove('hidden');
+                    } else if (!radio.checked && checkmark) {
+                        checkmark.classList.add('hidden');
                     }
                 });
             }
@@ -2931,14 +2974,19 @@
                     const lead = this.store.state.find(l => l.id === id);
                     if(lead) {
                         if(!lead.tasks) lead.tasks = [];
-                        lead.tasks.push({ id: this.store.generateId(), title, note: taskNote, dueDate, status: 'pending', createdAt: new Date().toISOString() });
-                        // Add activity log for task creation
-                        const activityNote = `Task created: Pending: ${title}${taskNote ? ' - ' + taskNote : ''}${dueDate ? ' (Due: ' + this.formatDate(dueDate) + ')' : ''}`;
-                        this.store.addActivity(id, { type: 'task', note: activityNote }, this.currentUser);
-                        // Add follow-up activity if due date exists
+                        const taskId = this.store.generateId();
+                        lead.tasks.push({ id: taskId, title, note: taskNote, dueDate, status: 'pending', createdAt: new Date().toISOString() });
+                        
+                        // 1. Log TASK Activity (History)
+                        const taskActivityNote = `Task created: Pending: ${title}${taskNote ? ' - ' + taskNote : ''}${dueDate ? ' (Due: ' + this.formatDate(dueDate) + ')' : ''}`;
+                        this.store.addActivity(id, { type: 'task', note: taskActivityNote, relatedTaskId: taskId }, this.currentUser);
+                        
+                        // 2. Log FOLLOW UP Activity (State Indicator) - Store just the date string
                         if(dueDate) {
-                            this.store.addActivity(id, { type: 'follow_up', note: dueDate }, this.currentUser);
+                            // Ensure we store just the date (YYYY-MM-DD), not a converted ISO string
+                            this.store.addActivity(id, { type: 'follow_up', note: String(dueDate).trim(), relatedTaskId: taskId }, this.currentUser);
                         }
+                        
                         this.store.save();
                         document.getElementById('taskInput').value = '';
                         document.getElementById('taskNote').value = '';
@@ -3016,6 +3064,7 @@
                         </div>`;
                 });
                 this.renderLeaderboard();
+                this.initializeFollowUpCheckmarks();
 
             }
 
@@ -3531,17 +3580,18 @@
                 const { leadId, taskIndex } = this.currentEditingTask;
                 const lead = this.store.state.find(l => l.id === leadId);
                 if(lead && lead.tasks && lead.tasks[taskIndex]) {
+                    const taskId = lead.tasks[taskIndex].id;
                     const taskTitle = lead.tasks[taskIndex].title;
                     lead.tasks[taskIndex].status = status;
                     lead.tasks[taskIndex].note = note;
                     lead.tasks[taskIndex].completedAt = new Date().toISOString();
                     
                     // Add activity log
-                    this.store.addActivity(leadId, { type: 'task', note: `Task ${status}: ${taskTitle} - ${note}` }, this.currentUser);
+                    this.store.addActivity(leadId, { type: 'task', note: `Task ${status}: ${taskTitle} - ${note}`, relatedTaskId: taskId }, this.currentUser);
                     
-                    // Remove associated follow-up activity
-                    if(lead.activities) {
-                        lead.activities = lead.activities.filter(a => !(a.type === 'follow_up' && a.note === lead.tasks[taskIndex].dueDate));
+                    // Remove associated follow-up activity when task is completed or dropped
+                    if(lead.activities && (status === 'completed' || status === 'dropped')) {
+                        lead.activities = lead.activities.filter(a => a.relatedTaskId !== taskId);
                     }
                     
                     this.store.save();
@@ -3567,10 +3617,18 @@
                 const lead = this.store.state.find(l => l.id === leadId);
                 if(lead && lead.tasks) {
                     const deletedTask = lead.tasks[taskIndex];
+                    const taskId = deletedTask ? deletedTask.id : null;
                     const taskTitle = deletedTask ? deletedTask.title : 'Unknown Task';
                     lead.tasks.splice(taskIndex, 1);
+                    
                     // Log activity when task is deleted
-                    this.store.addActivity(leadId, { type: 'task', note: `Task deleted: ${taskTitle}` }, this.currentUser);
+                    this.store.addActivity(leadId, { type: 'task', note: `Task deleted: ${taskTitle}`, relatedTaskId: taskId }, this.currentUser);
+                    
+                    // Remove associated follow-up activity
+                    if(lead.activities && taskId) {
+                        lead.activities = lead.activities.filter(a => a.relatedTaskId !== taskId);
+                    }
+                    
                     this.store.save();
                     this.renderTaskView(lead);
                 }
@@ -3587,29 +3645,78 @@
 
             openLeadFromMenu(id) { ui.toggleMenu(false); setTimeout(() => this.editLead(id, 'activity'), 150); }
             formatCurrency(v) { return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v||0); }
+            // Get current date/time in IST timezone
+            getISTDate(date = null) {
+                const d = date ? new Date(date) : new Date();
+                if (isNaN(d.getTime())) return new Date(); // Return current time if invalid
+                
+                // Convert to IST (UTC+5:30) by adding offset
+                // UTC time + 5.5 hours = IST
+                const utcTime = d.getTime();
+                const istTime = new Date(utcTime + (5.5 * 60 * 60 * 1000)); // Add 5:30 hours in milliseconds
+                return istTime;
+            }
+
+            // Get today's date in IST as string (YYYY-MM-DD)
+            getISTToday() {
+                const istDate = this.getISTDate();
+                const year = istDate.getFullYear();
+                const month = String(istDate.getMonth() + 1).padStart(2, '0');
+                const day = String(istDate.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
             formatDate(dateString) {
                 if (!dateString) return '';
                 const date = new Date(dateString);
                 if (isNaN(date.getTime())) return dateString;
-                const day = String(date.getDate()).padStart(2, '0');
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const year = date.getFullYear();
-                return `${day}/${month}/${year}`;
+                
+                try {
+                    // Use IST timezone
+                    const istDate = this.getISTDate(date);
+                    const day = String(istDate.getDate()).padStart(2, '0');
+                    const month = String(istDate.getMonth() + 1).padStart(2, '0');
+                    const year = istDate.getFullYear();
+                    
+                    // Validate values
+                    if (isNaN(day) || isNaN(month) || isNaN(year)) {
+                        return dateString;
+                    }
+                    
+                    return `${day}/${month}/${year}`;
+                } catch (e) {
+                    return dateString;
+                }
             }
 
             formatDateTime(dateString) {
                 if (!dateString) return '';
                 const date = new Date(dateString);
                 if (isNaN(date.getTime())) return dateString;
-                const day = String(date.getDate()).padStart(2, '0');
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const year = date.getFullYear();
-                let hours = date.getHours();
-                const minutes = String(date.getMinutes()).padStart(2, '0');
-                const ampm = hours >= 12 ? 'PM' : 'AM';
-                hours = hours % 12;
-                hours = hours ? hours : 12;
-                return `${day}/${month}/${year} ${hours}:${minutes} ${ampm}`;
+                
+                try {
+                    // Use IST timezone
+                    const istDate = this.getISTDate(date);
+                    const day = String(istDate.getDate()).padStart(2, '0');
+                    const month = String(istDate.getMonth() + 1).padStart(2, '0');
+                    const year = istDate.getFullYear();
+                    let hours = istDate.getHours();
+                    const minutes = String(istDate.getMinutes()).padStart(2, '0');
+                    
+                    // Validate values
+                    if (isNaN(day) || isNaN(month) || isNaN(year) || isNaN(hours) || isNaN(minutes)) {
+                        return dateString;
+                    }
+                    
+                    const ampm = hours >= 12 ? 'PM' : 'AM';
+                    hours = hours % 12;
+                    hours = hours ? hours : 12;
+                    const hoursStr = String(hours).padStart(2, '0');
+                    
+                    return `${day}/${month}/${year} ${hoursStr}:${minutes} ${ampm}`;
+                } catch (e) {
+                    return dateString;
+                }
             }
 
             // Follow-up date helper functions (checks followUpDate first, then falls back to earliest task due date)
@@ -3635,33 +3742,27 @@
                 const followUpDate = this.getFollowUpDate(lead);
                 if (!followUpDate) return false;
                 
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const fupDate = new Date(followUpDate);
-                fupDate.setHours(0, 0, 0, 0);
-                return fupDate < today;
+                // Use IST date for comparison
+                const today = this.getISTToday();
+                return followUpDate < today;
             }
 
             isFollowUpToday(lead) {
                 const followUpDate = this.getFollowUpDate(lead);
                 if (!followUpDate) return false;
                 
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const fupDate = new Date(followUpDate);
-                fupDate.setHours(0, 0, 0, 0);
-                return fupDate.getTime() === today.getTime();
+                // Use IST date for comparison
+                const today = this.getISTToday();
+                return followUpDate === today;
             }
 
             isFollowUpUpcoming(lead) {
                 const followUpDate = this.getFollowUpDate(lead);
                 if (!followUpDate) return false;
                 
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const fupDate = new Date(followUpDate);
-                fupDate.setHours(0, 0, 0, 0);
-                return fupDate > today;
+                // Use IST date for comparison
+                const today = this.getISTToday();
+                return followUpDate > today;
             }
 
             escapeHtml(s) { if(!s && s !== 0) return ''; const str = String(s); return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
