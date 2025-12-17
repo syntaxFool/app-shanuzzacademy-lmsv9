@@ -884,11 +884,23 @@
                     // Differential sync: merge received leads instead of replacing entire state
                     if (cloudData.leads && cloudData.leads.length > 0) {
                         if (lastSyncTime > 0) {
-                            // Merge: update or add only the received leads
+                            // Smart merge: use smart merge logic to compare timestamps
                             cloudData.leads.forEach(remoteLead => {
                                 const existingIdx = this.state.findIndex(l => l.id === remoteLead.id);
                                 if (existingIdx !== -1) {
-                                    this.state[existingIdx] = remoteLead;
+                                    const localLead = this.state[existingIdx];
+                                    // Apply smart merge: compare timestamps
+                                    const remoteTime = remoteLead.lastModified ? new Date(remoteLead.lastModified).getTime() : new Date(remoteLead.updatedAt).getTime();
+                                    const localTime = localLead.lastModified ? new Date(localLead.lastModified).getTime() : new Date(localLead.updatedAt).getTime();
+                                    
+                                    if (remoteTime > localTime) {
+                                        // Server is newer, use remote version
+                                        this.state[existingIdx] = remoteLead;
+                                        if (window.app) {
+                                            window.app.notify(`🔄 Lead "${remoteLead.name}" was updated by ${remoteLead.lastModifiedBy || 'another user'}. Synced latest version.`, 'info');
+                                        }
+                                    }
+                                    // If local is newer or same time, keep local (don't overwrite)
                                 } else {
                                     this.state.push(remoteLead);
                                 }
@@ -958,7 +970,7 @@
             log(msg, user) { const prefix = user ? `${user.name} (${user.role}): ` : 'System: '; this.logs.unshift({ id: this.generateId(), timestamp: new Date().toISOString(), message: prefix + msg }); if (this.logs.length > 50) this.logs.pop(); this.save(); }
             add(data, user) {
                 const now = new Date().toISOString();
-                const newLead = { id: this.generateId(), createdAt: now, updatedAt: now, activities: [], ...data };
+                const newLead = { id: this.generateId(), createdAt: now, updatedAt: now, lastModified: now, lastModifiedBy: user ? user.name : 'System', activities: [], ...data };
                 this.state.push(newLead);
                 this.log(`Created lead ${data.name}`, user);
                 
@@ -1000,7 +1012,8 @@
                 const idx = this.state.findIndex(l => l.id === id);
                 if (idx !== -1) {
                     const oldLead = this.state[idx];
-                    this.state[idx] = { ...this.state[idx], ...data, updatedAt: new Date().toISOString() };
+                    const now = new Date().toISOString();
+                    this.state[idx] = { ...this.state[idx], ...data, updatedAt: now, lastModified: now, lastModifiedBy: user ? user.name : 'System' };
                     this.log(`Updated ${data.name}`, user);
                     
                     if (!this.state[idx].activities) this.state[idx].activities = [];
@@ -1077,6 +1090,8 @@
                 if (l) {
                     l.status = status;
                     l.updatedAt = new Date().toISOString();
+                    l.lastModified = new Date().toISOString();
+                    l.lastModifiedBy = user ? user.name : 'System';
                     this.log(`Moved ${l.name} to ${status}`, user);
                     this.save();
                     if(window.app && typeof window.app.renderLeaderboard==='function'){window.app.renderLeaderboard();}
@@ -2818,6 +2833,44 @@
                 return duplicateLead || null;
             }
 
+            // Smart merge function: Compares timestamps and resolves conflicts
+            smartMergeLead(localVersion, serverVersion) {
+                if (!serverVersion) return localVersion;
+                if (!localVersion) return serverVersion;
+                
+                const serverTime = serverVersion.lastModified ? new Date(serverVersion.lastModified).getTime() : new Date(serverVersion.updatedAt).getTime();
+                const localTime = localVersion.lastModified ? new Date(localVersion.lastModified).getTime() : new Date(localVersion.updatedAt).getTime();
+                
+                // If server is newer, use server version but preserve local form data
+                if (serverTime > localTime) {
+                    this.notify(`🔄 Lead was recently updated by ${serverVersion.lastModifiedBy || 'another user'}. Refreshed from server.`, 'info');
+                    return serverVersion;
+                }
+                
+                // If local is newer or same, keep local version
+                return localVersion;
+            }
+
+            // Fetch latest version of a lead from the server
+            async fetchLatestLead(leadId) {
+                if (!this.store.config.dbUrl) return null;
+                try {
+                    const response = await fetch(this.store.config.dbUrl, {
+                        method: 'GET',
+                        redirect: 'follow',
+                        mode: 'cors',
+                        credentials: 'omit'
+                    });
+                    if (!response.ok) return null;
+                    const cloudData = await response.json();
+                    const latestLead = cloudData.leads.find(l => l.id === leadId);
+                    return latestLead || null;
+                } catch (e) {
+                    console.warn("Could not fetch latest lead from server:", e.message);
+                    return null;
+                }
+            }
+
             handleFormSubmit(e) {
                 e.preventDefault();
                 const f = e.target;
@@ -2895,8 +2948,36 @@
                         return;
                     }
                 }
-                
-                // Build the update object, preserving existing assignedTo if agent doesn't change it
+
+                // For existing leads: Fetch latest version from server and merge
+                if (f.leadId.value && existingLead) {
+                    this.fetchLatestLead(f.leadId.value).then(latestServerLead => {
+                        if (latestServerLead) {
+                            // Apply smart merge logic
+                            const mergedLead = this.smartMergeLead(existingLead, latestServerLead);
+                            
+                            // If server was newer, update local cache with server version
+                            if (mergedLead === latestServerLead) {
+                                existingLead = latestServerLead;
+                                // Update the store with latest version
+                                const idx = this.store.state.findIndex(l => l.id === f.leadId.value);
+                                if (idx !== -1) {
+                                    this.store.state[idx] = latestServerLead;
+                                }
+                            }
+                        }
+                        
+                        // Continue with the save after merge is complete
+                        this._saveLead(f, existingLead, fullPhone);
+                    });
+                } else {
+                    // New lead or no server fetch needed
+                    this._saveLead(f, existingLead, fullPhone);
+                }
+            }
+
+            // Helper function to actually save the lead (extracted from handleFormSubmit)
+            _saveLead(f, existingLead, fullPhone) {
                 const isFormAdmin = this.currentUser && (this.currentUser.role === 'admin' || this.currentUser.role === 'superuser');
                 const d = {
                     name: f.name.value,
@@ -2912,7 +2993,10 @@
                     phone: fullPhone,
                     notes: f.notes.value,
                     // Preserve lostReason if status is "Lost", otherwise clear it
-                    lostReason: f.status.value === 'Lost' ? (existingLead ? existingLead.lostReason : '') : ''
+                    lostReason: f.status.value === 'Lost' ? (existingLead ? existingLead.lostReason : '') : '',
+                    // Add timestamp tracking
+                    lastModified: new Date().toISOString(),
+                    lastModifiedBy: this.currentUser ? this.currentUser.name : 'System'
                 };
                 let prevAssignedTo = null;
                 if (f.leadId.value) {

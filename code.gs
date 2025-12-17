@@ -13,8 +13,10 @@ function doGet(e) {
   const lastSyncTime = e && e.parameter && e.parameter.lastSyncTime ? parseInt(e.parameter.lastSyncTime) : 0;
   if (lastSyncTime > 0) {
     leads = leads.filter(lead => {
-      if (!lead.updatedAt) return false; // Skip leads without updatedAt (shouldn't happen)
-      const leadUpdateTime = new Date(lead.updatedAt).getTime();
+      // Use lastModified if available (more accurate), fallback to updatedAt for backward compatibility
+      const updateTimeStr = lead.lastModified || lead.updatedAt;
+      if (!updateTimeStr) return false;
+      const leadUpdateTime = new Date(updateTimeStr).getTime();
       return leadUpdateTime > lastSyncTime;
     });
   }
@@ -126,7 +128,7 @@ function doPost(e) {
           }
         });
 
-        writeSheet(ss.getSheetByName('Leads'), flatLeads, ['id', 'name', 'phone', 'email', 'status', 'value', 'interest', 'location', 'source', 'assignedTo', 'notes', 'temperature', 'lostReason', 'createdAt', 'updatedAt']);
+        writeSheet(ss.getSheetByName('Leads'), flatLeads, ['id', 'name', 'phone', 'email', 'status', 'value', 'interest', 'location', 'source', 'assignedTo', 'notes', 'temperature', 'lostReason', 'createdAt', 'updatedAt', 'lastModified', 'lastModifiedBy']);
         writeSheet(ss.getSheetByName('Activities'), flatActivities, ['id', 'leadId', 'type', 'note', 'timestamp', 'createdBy', 'role']);
         writeSheet(ss.getSheetByName('Tasks'), flatTasks, ['id', 'leadId', 'title', 'status', 'dueDate', 'note', 'createdAt', 'completedAt']);
       }
