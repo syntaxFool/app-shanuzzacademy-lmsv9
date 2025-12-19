@@ -1,3 +1,7 @@
+// ========== CONFIGURATION ==========
+const SHEET_ID = '1QyDwEBFR3fXve9lifuH9pdbDIyuLLC2RQrOmMYNMmII';
+const SECRET_KEY = 'diffusion-bulginess-symphony';
+
 function doGet(e) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   setupSheets(ss);
@@ -84,9 +88,7 @@ function doGet(e) {
     lastUpdate: lastUpdate
   });
 
-  const response = ContentService.createTextOutput(output);
-  response.setMimeType(ContentService.MimeType.JSON);
-  return response;
+  return createCORSResponse(output);
 }
 
 function doPost(e) {
@@ -97,13 +99,41 @@ function doPost(e) {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) {
     return createCORSResponse(JSON.stringify({ 
-      status: 'error', 
-      message: 'Server busy. Please try again.' 
+      success: false,
+      error: 'Server busy. Please try again.' 
     }));
   }
   
   try {
     const data = JSON.parse(e.postData.contents);
+    
+    // Handle authentication requests
+    if (data.function === 'authenticateUser') {
+      const credentials = data.parameters[0];
+      const result = authenticateUser(ss, credentials);
+      return createCORSResponse(JSON.stringify(result));
+    }
+    
+    // Handle token validation
+    if (data.function === 'validateToken') {
+      const tokenData = data.parameters[0];
+      const result = validateToken(ss, tokenData);
+      return createCORSResponse(JSON.stringify(result));
+    }
+    
+    // Handle profile update
+    if (data.function === 'updateUserProfile') {
+      const profileData = data.parameters[0];
+      const result = updateUserProfile(ss, profileData);
+      return createCORSResponse(JSON.stringify(result));
+    }
+    
+    // Handle logout
+    if (data.function === 'logoutUser') {
+      const userData = data.parameters[0];
+      const result = logoutUser(ss, userData);
+      return createCORSResponse(JSON.stringify(result));
+    }
     
     if (data.action === 'save_all') {
       if(data.users) writeSheet(ss.getSheetByName('Users'), data.users, ['id', 'username', 'password', 'name', 'role']);
@@ -226,5 +256,229 @@ function updateLastModified() {
 function createCORSResponse(jsonString) {
   const response = ContentService.createTextOutput(jsonString);
   response.setMimeType(ContentService.MimeType.JSON);
+  response.addHeader('Access-Control-Allow-Origin', '*');
+  response.addHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  response.addHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   return response;
+}
+
+// ========== AUTHENTICATION FUNCTIONS ==========
+
+function authenticateUser(ss, credentials) {
+  try {
+    const { uid, password } = credentials;
+    
+    if (!uid || !password) {
+      return { success: false, error: 'UID and password required' };
+    }
+    
+    // Get users from sheet
+    const usersSheet = ss.getSheetByName('Users');
+    const users = readSheet(usersSheet);
+    
+    // Find user
+    let user = null;
+    for (let i = 0; i < users.length; i++) {
+      if (users[i].username === uid) {
+        // Simple password comparison (in production, use proper hashing)
+        if (users[i].password === password) {
+          user = {
+            id: users[i].id || Utilities.getUuid(),
+            name: users[i].name,
+            email: uid,
+            role: users[i].role || 'user',
+            picture: 'https://via.placeholder.com/50'
+          };
+        }
+        break;
+      }
+    }
+    
+    if (!user) {
+      return { success: false, error: 'Invalid UID or password' };
+    }
+    
+    // Create JWT token
+    const token = createJWT(user);
+    
+    return {
+      success: true,
+      data: {
+        user,
+        token
+      }
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+function validateToken(ss, tokenData) {
+  try {
+    const { token } = tokenData;
+    
+    if (!token) {
+      return { success: false, error: 'Token required' };
+    }
+    
+    // Verify JWT (simplified)
+    const tokenParts = token.split('.');
+    if (tokenParts.length !== 3) {
+      return { success: false, error: 'Invalid token' };
+    }
+    
+    try {
+      const payload = JSON.parse(Utilities.newBlob(Utilities.base64Decode(tokenParts[1])).getDataAsString());
+      
+      // Check expiration
+      if (payload.exp && payload.exp < (new Date().getTime() / 1000)) {
+        return { success: false, error: 'Token expired' };
+      }
+      
+      return {
+        success: true,
+        data: payload.user
+      };
+    } catch (e) {
+      return { success: false, error: 'Invalid token format' };
+    }
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+function updateUserProfile(ss, profileData) {
+  try {
+    const { user, updates } = profileData;
+    
+    const usersSheet = ss.getSheetByName('Users');
+    const data = usersSheet.getDataRange().getValues();
+    const headers = data[0];
+    
+    // Find user row
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === user.id) {
+        // Update fields
+        if (updates.name) {
+          const nameCol = headers.indexOf('name');
+          if (nameCol !== -1) data[i][nameCol] = updates.name;
+        }
+        
+        usersSheet.getRange(1, 1, data.length, data[0].length).setValues(data);
+        
+        return {
+          success: true,
+          data: { ...user, ...updates }
+        };
+      }
+    }
+    
+    return { success: false, error: 'User not found' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+function logoutUser(ss, userData) {
+  try {
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+function createJWT(user) {
+  try {
+    const header = Utilities.base64Encode(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).replace(/=+$/, '');
+    const now = Math.floor(new Date().getTime() / 1000);
+    const payload = Utilities.base64Encode(JSON.stringify({
+      user,
+      iat: now,
+      exp: now + (24 * 60 * 60) // 24 hours
+    })).replace(/=+$/, '');
+    
+    // Simple signature (in production use HMAC-SHA256)
+    const message = header + '.' + payload;
+    const signature = Utilities.base64Encode(
+      Utilities.computeSignature(Utilities.SignatureAlgorithm.HMAC_SHA_256, message, SECRET_KEY)
+    ).replace(/=+$/, '');
+    
+    return message + '.' + signature;
+  } catch (error) {
+    console.log('Error creating JWT:', error);
+    return null;
+  }
+}
+
+// ========== INITIALIZATION FUNCTION ==========
+
+function initializeSheets() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // Create all required sheets
+    const sheetNames = ['Leads', 'Activities', 'Tasks', 'Users', 'Logs', 'Interests', 'Settings'];
+    
+    sheetNames.forEach(name => {
+      if (!ss.getSheetByName(name)) {
+        ss.insertSheet(name);
+      }
+    });
+    
+    // Initialize Users sheet with superuser
+    const usersSheet = ss.getSheetByName('Users');
+    if (usersSheet.getLastRow() === 0) {
+      const superUser = {
+        id: Utilities.getUuid(),
+        username: 'nox1',
+        password: '1233',
+        name: 'Superuser',
+        role: 'admin'
+      };
+      writeSheet(usersSheet, [superUser], ['id', 'username', 'password', 'name', 'role']);
+    }
+    
+    // Initialize Leads sheet
+    const leadsSheet = ss.getSheetByName('Leads');
+    if (leadsSheet.getLastRow() === 0) {
+      leadsSheet.appendRow(['id', 'name', 'email', 'phone', 'location', 'source', 'status', 'value', 'createdAt', 'updatedAt']);
+    }
+    
+    // Initialize Activities sheet
+    const activitiesSheet = ss.getSheetByName('Activities');
+    if (activitiesSheet.getLastRow() === 0) {
+      activitiesSheet.appendRow(['id', 'leadId', 'type', 'description', 'timestamp']);
+    }
+    
+    // Initialize Tasks sheet
+    const tasksSheet = ss.getSheetByName('Tasks');
+    if (tasksSheet.getLastRow() === 0) {
+      tasksSheet.appendRow(['id', 'leadId', 'title', 'status', 'dueDate', 'createdAt']);
+    }
+    
+    // Initialize Logs sheet
+    const logsSheet = ss.getSheetByName('Logs');
+    if (logsSheet.getLastRow() === 0) {
+      logsSheet.appendRow(['id', 'timestamp', 'message']);
+    }
+    
+    // Initialize Interests sheet
+    const interestsSheet = ss.getSheetByName('Interests');
+    if (interestsSheet.getLastRow() === 0) {
+      interestsSheet.appendRow(['id', 'name', 'category']);
+    }
+    
+    // Initialize Settings sheet
+    const settingsSheet = ss.getSheetByName('Settings');
+    if (settingsSheet.getLastRow() === 0) {
+      settingsSheet.appendRow(['Locations', 'Sources', 'TaskTitles', 'ScriptURL', 'AppTitle']);
+      settingsSheet.appendRow(['New York', 'Facebook', 'Follow up', '', 'Shanuzz Academy LMS']);
+      settingsSheet.appendRow(['Los Angeles', 'Google', 'Call', '', '']);
+      settingsSheet.appendRow(['Chicago', 'LinkedIn', 'Email', '', '']);
+    }
+    
+    Logger.log('Database initialized successfully!');
+  } catch (error) {
+    Logger.log('Error initializing sheets: ' + error.message);
+  }
 }
